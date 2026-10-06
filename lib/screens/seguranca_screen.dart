@@ -1,344 +1,83 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../widgets/common.dart';
 
 class SegurancaScreen extends StatefulWidget {
   const SegurancaScreen({super.key});
-
   @override
   State<SegurancaScreen> createState() => _SegurancaScreenState();
 }
-
 class _SegurancaScreenState extends State<SegurancaScreen> {
-  bool notificacoesSeguranca = true;
-  bool filtroConteudo = true;
-  bool mensagensDesconhecidos = true;
-  bool perfilPrivado = true;
-
+  final name = TextEditingController(), bio = TextEditingController();
+  bool initialized = false, private = true, messages = false, busy = false;
+  @override
+  void didChangeDependencies() { super.didChangeDependencies(); if (!initialized) { final u = AppScope.of(context).account!; name.text = u.name; bio.text = u.bio; private = u.private; messages = u.messages; initialized = true; } }
+  @override
+  void dispose() { name.dispose(); bio.dispose(); super.dispose(); }
+  Future<void> save() async {
+    setState(() => busy = true);
+    try { final state = AppScope.of(context); await state.api.request('PATCH','/me',{'name':name.text,'bio':bio.text,'private':private,'messages':messages}); await state.reloadAccount(); if (mounted) showFeedback(context,'Preferências salvas no servidor.'); }
+    catch(e) { if (mounted) showFeedback(context,e); }
+    finally { if (mounted) setState(() => busy = false); }
+  }
+  Future<void> export() async {
+    try { final result = await AppScope.of(context).api.request('GET','/me/export'); if (!mounted) return; await showDialog<void>(context: context, builder: (context) => AlertDialog(title: const Text('Seus dados'), content: SingleChildScrollView(child: SelectableText(const JsonEncoder.withIndent('  ').convert(result))), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fechar'))])); }
+    catch(e) { if (mounted) showFeedback(context,e); }
+  }
+  Future<void> delete() async {
+    final controller = TextEditingController();
+    final password = await showDialog<String>(context: context, builder: (context) => AlertDialog(title: const Text('Excluir conta permanentemente?'), content: Column(mainAxisSize: MainAxisSize.min, children: [const Text('Publicações, mensagens, mídias e dados da conta serão removidos. Confirme sua senha.'), const SizedBox(height: 16), TextField(controller: controller, obscureText: true, decoration: const InputDecoration(labelText: 'Senha'))]), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')), FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Excluir conta'))]));
+    // The dialog transition may still use its controller; dispose after it finishes.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    controller.dispose();
+    if (password == null || !mounted) return;
+    try { final state = AppScope.of(context); await state.api.request('DELETE','/me',{'password':password}); await state.clearSession(); if (mounted) Navigator.pushNamedAndRemoveUntil(context,'/login',(_) => false); }
+    catch(e) { if (mounted) showFeedback(context,e); }
+  }
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFEAF0FF),
-              Color(0xFFF8FAFF),
-              Color(0xFFE8F8F5),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 20,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-
-                // ÍCONE
-                Center(
-                  child: Container(
-                    width: 95,
-                    height: 95,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          Color(0xFF4A6CF7),
-                          Color(0xFF55C9B0),
-                        ],
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.security_rounded,
-                      color: Colors.white,
-                      size: 52,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 22),
-
-                // TÍTULO
-                const Center(
-                  child: Text(
-                    'Sua segurança',
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                const Center(
-                  child: Text(
-                    'Vamos deixar seu espaço mais seguro.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // AVISO
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(
-                      color: Colors.black12,
-                    ),
-                  ),
-                  child: const Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.shield_outlined,
-                        color: Color(0xFF4A6CF7),
-                        size: 28,
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Algumas configurações de segurança '
-                          'serão ativadas para ajudar a proteger '
-                          'sua experiência na plataforma.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 25),
-
-                const Text(
-                  'Configurações de proteção',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // PERFIL PRIVADO
-                _configuracao(
-                  titulo: 'Perfil privado',
-                  descricao:
-                      'Seu perfil fica visível apenas para pessoas '
-                      'que você permitir.',
-                  icone: Icons.lock_outline_rounded,
-                  valor: perfilPrivado,
-                  aoAlterar: (valor) {
-                    setState(() {
-                      perfilPrivado = valor;
-                    });
-                  },
-                ),
-
-                // FILTRO DE CONTEÚDO
-                _configuracao(
-                  titulo: 'Filtro de conteúdo',
-                  descricao:
-                      'Ajuda a limitar conteúdos inadequados '
-                      'para sua faixa etária.',
-                  icone: Icons.filter_alt_outlined,
-                  valor: filtroConteudo,
-                  aoAlterar: (valor) {
-                    setState(() {
-                      filtroConteudo = valor;
-                    });
-                  },
-                ),
-
-                // MENSAGENS
-                _configuracao(
-                  titulo: 'Mensagens de desconhecidos',
-                  descricao:
-                      'Impede que pessoas desconhecidas enviem '
-                      'mensagens diretamente para você.',
-                  icone: Icons.message_outlined,
-                  valor: mensagensDesconhecidos,
-                  aoAlterar: (valor) {
-                    setState(() {
-                      mensagensDesconhecidos = valor;
-                    });
-                  },
-                ),
-
-                // NOTIFICAÇÕES
-                _configuracao(
-                  titulo: 'Alertas de segurança',
-                  descricao:
-                      'Receba avisos quando houver alguma '
-                      'atividade importante relacionada à segurança.',
-                  icone: Icons.notifications_none_rounded,
-                  valor: notificacoesSeguranca,
-                  aoAlterar: (valor) {
-                    setState(() {
-                      notificacoesSeguranca = valor;
-                    });
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // INFORMAÇÃO
-                Container(
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF0FF),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.info_outline_rounded,
-                        color: Color(0xFF4A6CF7),
-                      ),
-                      SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'As configurações de proteção podem '
-                          'variar de acordo com a idade informada '
-                          'no cadastro.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 28),
-
-                // BOTÃO CONTINUAR
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/inicio');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          const Color(0xFF4A6CF7),
-                      foregroundColor: Colors.white,
-                      elevation: 5,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(18),
-                      ),
-                    ),
-                    child: const Text(
-                      'Continuar',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // RODAPÉ
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.verified_user_outlined,
-                      size: 18,
-                      color: Colors.grey,
-                    ),
-                    SizedBox(width: 7),
-                    Text(
-                      'Sua segurança é nossa prioridade',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 15),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    final user = AppScope.of(context).account;
+    if (user == null) return const Scaffold(body: EmptyState(message: 'Sessão encerrada.'));
+    return Scaffold(appBar: AppBar(title: const Text('Privacidade e segurança')), body: ContentFrame(width: 620, child: ListView(padding: const EdgeInsets.all(24), children: [
+      Text('Você está no controle', style: Theme.of(context).textTheme.headlineMedium), const SizedBox(height: 20),
+      TextField(controller: name, maxLength: 60, decoration: const InputDecoration(labelText: 'Apelido')), const SizedBox(height: 12), TextField(controller: bio, maxLength: 180, maxLines: 3, decoration: const InputDecoration(labelText: 'Biografia (sem informações pessoais)')),
+      SwitchListTile(title: const Text('Perfil privado'), subtitle: Text(user.needsGuardian ? 'Obrigatório para menores neste projeto.' : 'Somente contatos aprovados veem suas publicações.'), value: private, onChanged: user.needsGuardian || busy ? null : (v) => setState(() => private = v)),
+      SwitchListTile(title: const Text('Mensagens de contatos aprovados'), subtitle: const Text('Desconhecidos nunca podem iniciar conversas.'), value: messages, onChanged: busy ? null : (v) => setState(() => messages = v)),
+      const SizedBox(height: 12), FilledButton(onPressed: busy ? null : save, child: Text(busy ? 'Salvando…' : 'Salvar preferências')), const SizedBox(height: 24),
+      ListTile(leading: const Icon(Icons.block), title: const Text('Pessoas bloqueadas'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const BlocksScreen()))),
+      ListTile(leading: const Icon(Icons.flag_outlined), title: const Text('Minhas denúncias'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const ReportsScreen()))),
+      ListTile(leading: const Icon(Icons.person_add_outlined), title: const Text('Pedidos de contato'), trailing: const Icon(Icons.chevron_right), onTap: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const ContactRequestsScreen()))),
+      ListTile(leading: const Icon(Icons.family_restroom), title: const Text('Situação do vínculo familiar'), onTap: () => Navigator.pushNamed(context,'/painel-responsavel')),
+      ListTile(leading: const Icon(Icons.download_outlined), title: const Text('Consultar e copiar meus dados'), onTap: export),
+      const ListTile(leading: Icon(Icons.accessibility_new), title: Text('Acessibilidade'), subtitle: Text('Compatível com escala de texto e leitor de tela. Transições respeitam a preferência do sistema por reduzir animações.')),
+      const ListTile(leading: Icon(Icons.face_outlined), title: Text('Verificação facial'), subtitle: Text('Desativada. Nenhuma câmera, imagem facial ou dado biométrico é coletado.')),
+      const SizedBox(height: 16), OutlinedButton.icon(onPressed: () async { try { await AppScope.of(context).logout(); if (context.mounted) Navigator.pushNamedAndRemoveUntil(context,'/login',(_) => false); } catch(e) { if (context.mounted) showFeedback(context,e); } }, icon: const Icon(Icons.logout), label: const Text('Sair da conta')),
+      TextButton(onPressed: delete, child: Text('Excluir minha conta', style: TextStyle(color: Theme.of(context).colorScheme.error))),
+    ])));
   }
-
-  // ======================================================
-  // WIDGET DE CONFIGURAÇÃO
-  // ======================================================
-
-  Widget _configuracao({
-    required String titulo,
-    required String descricao,
-    required IconData icone,
-    required bool valor,
-    required Function(bool) aoAlterar,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.black12,
-        ),
-      ),
-      child: SwitchListTile(
-        value: valor,
-        onChanged: aoAlterar,
-        activeColor: const Color(0xFF4A6CF7),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 8,
-        ),
-        secondary: Icon(
-          icone,
-          color: const Color(0xFF4A6CF7),
-          size: 28,
-        ),
-        title: Text(
-          titulo,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 5),
-          child: Text(
-            descricao,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
-              height: 1.3,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+}
+class BlocksScreen extends StatefulWidget {
+  const BlocksScreen({super.key});
+  @override
+  State<BlocksScreen> createState() => _BlocksScreenState();
+}
+class _BlocksScreenState extends State<BlocksScreen> {
+  int revision = 0;
+  @override
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Bloqueados')), body: ContentFrame(child: AsyncItems(key: ValueKey(revision), load: () => AppScope.of(context).social.list('/blocks'), builder: (_,v) => ListTile(title: Text(v['name'] as String), trailing: TextButton(onPressed: () async { try { await AppScope.of(context).api.request('DELETE','/blocks/${v['id']}'); if (mounted) setState(() => revision++); } catch(e) { if (mounted) showFeedback(context,e); } }, child: const Text('Desbloquear'))))));
+}
+class ReportsScreen extends StatelessWidget {
+  const ReportsScreen({super.key});
+  @override
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Minhas denúncias')), body: ContentFrame(child: AsyncItems(load: () => AppScope.of(context).social.list('/reports'), builder: (_,v) => ListTile(title: Text(v['reason'] as String), subtitle: Text('Protocolo: ${v['id']}\nStatus: ${v['status']}')))));
+}
+class ContactRequestsScreen extends StatefulWidget {
+  const ContactRequestsScreen({super.key});
+  @override
+  State<ContactRequestsScreen> createState() => _ContactRequestsScreenState();
+}
+class _ContactRequestsScreenState extends State<ContactRequestsScreen> {
+  int revision = 0;
+  @override
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Pedidos de contato')), body: ContentFrame(child: AsyncItems(key: ValueKey(revision), load: () => AppScope.of(context).social.list('/contacts/requests'), builder: (_,v) => ListTile(title: Text(v['name'] as String), trailing: TextButton(onPressed: () async { try { await AppScope.of(context).api.request('POST','/contacts/approve',{'target':v['id']}); if (mounted) setState(() => revision++); } catch(e) { if (mounted) showFeedback(context,e); } }, child: const Text('Aprovar'))))));
 }

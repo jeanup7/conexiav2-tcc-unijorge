@@ -1,0 +1,6 @@
+__pycache__/
+*.sqlite3
+*.sqlite3-*
+.env
+# Resíduo de teste criado nesta sessão; remoção bloqueada pela política do ambiente.
+tmpei_dbjlj/
