@@ -53,3 +53,8 @@ app.*.map.json
 !.env.example
 *.sqlite3
 *.sqlite3-*
+
+# Firebase Admin credentials belong outside the checkout
+**/*firebase-adminsdk*.json
+**/*service-account*.json
+backend/.venv/

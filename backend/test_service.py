@@ -1,3 +1,4 @@
+from test_image_data import png_bytes
 import unittest
 from service import Service, Repository, ApiError, password_matches
 
@@ -73,7 +74,9 @@ class SafetyTests(unittest.TestCase):
         for session in (self.a,self.b): self.call('PATCH','/me',{'name':session['user']['name'],'messages':True},session)
         self.call('POST',endpoint,{'text':'hello'})
         rows=self.call('GET','/messages/'+self.a['user']['id'],session=self.b)['items']
-        self.assertEqual('hello',rows[0]['text']); self.assertEqual(1,rows[0]['read'])
+        self.assertEqual('hello',rows[0]['text']); self.assertEqual(0,rows[0]['read'])
+        self.call('POST','/messages/'+self.a['user']['id']+'/read',{'ids':[rows[0]['id']]},self.b)
+        self.assertEqual(1,self.call('GET','/messages/'+self.a['user']['id'],session=self.b)['items'][0]['read'])
     def test_story_expiry_and_pagination(self):
         pid=self.call('POST','/stories',{'text':'temporary'})['id']
         self.assertEqual(1,len(self.call('GET','/stories')['items']))
@@ -134,6 +137,56 @@ class SafetyTests(unittest.TestCase):
     def test_unconfigured_provider_fails_closed(self):
         from providers import UnconfiguredGuardianProvider
         self.assertFalse(UnconfiguredGuardianProvider().verify_callback(b'{"approved":true}','fake').verified)
+
+    def upload(self, session=None):
+        import base64
+        return self.call('POST','/media',{'mime':'image/png','data':base64.b64encode(png_bytes()).decode()},session)['id']
+    def test_carousel_order_ownership_and_visibility(self):
+        images=[self.upload(),self.upload()]
+        pid=self.call('POST','/posts',{'text':'gallery','mediaItems':images})['id']
+        row=self.call('GET','/posts')['items'][0]
+        self.assertEqual(images,row['mediaItems'])
+        self.assertEqual(images[0],row['media'])
+        self.expect(404,lambda:self.call('GET','/media/'+images[1],session=self.b))
+        self.connect()
+        self.assertEqual('image/png',self.call('GET','/media/'+images[1],session=self.b)['mime'])
+        self.call('POST','/blocks',{'target':self.a['user']['id']},self.b)
+        self.expect(404,lambda:self.call('GET','/media/'+images[1],session=self.b))
+        self.call('DELETE','/posts/'+pid)
+        self.assertEqual([],self.repo.rows('SELECT * FROM post_media'))
+    def test_carousel_rejects_invalid_lists_before_creating_post(self):
+        own=self.upload(); foreign=self.upload(self.b)
+        for images in ([own,foreign],[own,own],[own]*11,'invalid',[None]):
+            self.expect(400,lambda:self.call('POST','/posts',{'text':'gallery','mediaItems':images}))
+        self.assertEqual([],self.repo.rows('SELECT * FROM posts'))
+    def test_legacy_photo_and_gallery_survive_cleanup(self):
+        from maintenance import purge
+        images=[self.upload(),self.upload()]
+        legacy=self.call('POST','/posts',{'text':'legacy','media':images[0]})['id']
+        self.repo.execute('DELETE FROM post_media WHERE post=?',(legacy,))
+        gallery=self.call('POST','/posts',{'text':'gallery','mediaItems':images})['id']
+        orphan=self.upload()
+        purge(self.repo,orphan_grace_seconds=0)
+        self.assertIsNone(self.repo.one('SELECT * FROM media WHERE id=?',(orphan,)))
+        posts={p['id']:p for p in self.call('GET','/posts')['items']}
+        self.assertEqual(images,posts[gallery]['mediaItems'])
+        self.assertEqual([images[0]],posts[legacy]['mediaItems'])
+    def test_profile_details_and_filtered_posts_obey_privacy(self):
+        owner=self.a['user']['id']
+        self.expect(404,lambda:self.call('GET','/profiles/'+owner,session=self.b))
+        self.expect(404,lambda:self.call('GET','/posts',{'user':owner},self.b))
+        self.connect()
+        profile=self.call('GET','/profiles/'+owner,session=self.b)
+        self.assertEqual({'id','name','bio','private','avatar'},set(profile))
+        self.call('POST','/posts',{'text':'other'},self.b)
+        for i in range(3): self.call('POST','/posts',{'text':str(i)})
+        first=self.call('GET','/posts',{'user':owner,'limit':'2'},self.b)
+        second=self.call('GET','/posts',{'user':owner,'cursor':str(first['nextCursor'])},self.b)
+        self.assertEqual(2,len(first['items']))
+        self.assertEqual(1,len(second['items']))
+        self.assertTrue(all(p['user']==owner for p in first['items']+second['items']))
+        self.call('POST','/blocks',{'target':owner},self.b)
+        self.expect(404,lambda:self.call('GET','/profiles/'+owner,session=self.b))
     def tearDown(self): self.repo.db.close()
 
 if __name__=='__main__': unittest.main()

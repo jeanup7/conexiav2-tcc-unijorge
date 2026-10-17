@@ -1,0 +1,56 @@
+[
+  {
+    "file": "ben_ten.jpg",
+    "label": "Ben e suas aventuras",
+    "category": "anime",
+    "source": "user-attachment"
+  },
+  {
+    "file": "robin.jpg",
+    "label": "Heróis e trabalho em equipe",
+    "category": "anime",
+    "source": "user-attachment"
+  },
+  {
+    "file": "manga_mar.jpg",
+    "label": "Leitura com vista para o mar",
+    "category": "education",
+    "source": "user-attachment"
+  },
+  {
+    "file": "chapeu_aventura.jpg",
+    "label": "Uma aventura ao ar livre",
+    "category": "other",
+    "source": "user-attachment"
+  },
+  {
+    "file": "luffy_pelucia.jpg",
+    "label": "Detalhes de uma coleção criativa",
+    "category": "art",
+    "source": "user-attachment"
+  },
+  {
+    "file": "skate.jpg",
+    "label": "Uma volta de skate",
+    "category": "sports",
+    "source": "user-attachment"
+  },
+  {
+    "file": "avatar_ilustrado.jpg",
+    "label": "Retrato ilustrado",
+    "category": "art",
+    "source": "user-attachment"
+  },
+  {
+    "file": "zeno_kamau.jpg",
+    "label": "Expressão e estilo na ilustração",
+    "category": "art",
+    "source": "user-attachment"
+  },
+  {
+    "file": "garoto_quadrinhos.jpg",
+    "label": "Meu personagem em preto e branco",
+    "category": "art",
+    "source": "user-attachment"
+  }
+]

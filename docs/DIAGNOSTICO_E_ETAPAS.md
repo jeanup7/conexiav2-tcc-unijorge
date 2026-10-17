@@ -113,3 +113,9 @@ A pasta `backend/tmpei_dbjlj` foi criada por um teste inicial com TemporaryDirec
 O usuário executou `flutter pub get` com sucesso no terminal local, atualizando o lockfile, e compartilhou capturas da prévia funcionando no Chrome. Isso atualiza o estado do diagnóstico original: dependências resolvidas e renderização da prévia observada por capturas do usuário; análise e suíte Flutter completas ainda não confirmadas. O ambiente do agente continua falhando com `resolved_executable_name`.
 
 Antes do envio ao GitHub, foi encontrado `origin/main` no commit `a9cac2f` (Atualiza aplicativo e integra Firebase), posterior ao ponto de partida local `14b2599`. A evolução REST/SQLite e prévia foi preparada na branch `codex/conexia-rest-preview`, a partir da base local. A main com Firebase não foi substituída. Integrar ambas exige uma decisão de arquitetura e resolução consciente das alterações nas telas, dependências e autenticação.
+
+## Atualização: navegação inferior, perfis e várias fotos
+
+A restrição anterior do SDK no ambiente foi resolvida: pub get e análise Flutter executam normalmente. A prévia agora usa estado compartilhado entre cinco abas, abre perfil pelo avatar/nome e mostra grade de publicações. O compositor permite até 10 fotos; o carrossel usa PageView com setas, contador e indicadores. A API persiste galerias ordenadas e oferece consulta de perfil/filtragem de posts respeitando privacidade e bloqueios. Fotos antigas continuam compatíveis.
+
+Foram adicionados testes de interação em tela de 390×844, sem login nem chamadas ao backend, e testes Python de ordem das imagens, rejeição de imagens de outra conta, visibilidade, limpeza e filtro paginado de perfis. A suíte Python possui 24 testes aprovados; a análise Flutter não encontra problemas. Validação Android/iOS permanece pendente.

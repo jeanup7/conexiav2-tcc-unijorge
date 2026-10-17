@@ -1,0 +1,60 @@
+{
+  "minor_outgoing_approved_by_recipient": {
+    "child_to_adult": {
+      "approved": 1
+    },
+    "adult_to_child": {
+      "approved": 1
+    }
+  },
+  "unrelated_adult_approves_minor_request": [
+    {
+      "approved": 1
+    },
+    {
+      "approved": 1
+    }
+  ],
+  "story_accepted_as_feed_view": true,
+  "chat_201_messages": {
+    "returned": 200,
+    "last_returned": "m199",
+    "newest_present": false,
+    "marked_read_total": 201
+  },
+  "pagination_identical_timestamp": {
+    "first": 2,
+    "second": 0,
+    "total_in_db": 3
+  },
+  "search_before_authorization_limit": {
+    "matches": 51,
+    "eligible": 1,
+    "returned": 0
+  },
+  "invalid_image_accepted": true,
+  "login_limit_reset_before_900s": {
+    "allowed_after_seconds": 61,
+    "count_after": 1
+  },
+  "feed_microbenchmark_sqlite_memory_no_firebase": [
+    {
+      "posts_in_db": 100,
+      "returned": 15,
+      "sql_statements": 292,
+      "elapsed_ms": 1.39
+    },
+    {
+      "posts_in_db": 1000,
+      "returned": 15,
+      "sql_statements": 2092,
+      "elapsed_ms": 10.6
+    },
+    {
+      "posts_in_db": 5000,
+      "returned": 15,
+      "sql_statements": 10092,
+      "elapsed_ms": 53.91
+    }
+  ]
+}

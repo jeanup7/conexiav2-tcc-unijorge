@@ -50,10 +50,49 @@ class HttpIntegration(unittest.TestCase):
         self.assertEqual(401,self.request('/posts')[0])
     def test_health_and_malformed_body(self):
         self.assertEqual('sqlite',self.request('/health')[1]['storage'])
-        req=Request(self.url+'/auth/login',data=b'invalid-json',method='POST')
+        req=Request(self.url+'/auth/login',data=b'invalid-json',headers={'Content-Type':'application/json'},method='POST')
         with self.assertRaises(HTTPError) as cm: urlopen(req,timeout=5)
         self.assertEqual(400,cm.exception.code)
         cm.exception.close()
+    def test_launcher_rejects_missing_firebase_before_binding_port(self):
+        import os
+        import subprocess
+        import sys
+        environment=dict(os.environ,CONEXIA_DEV='1')
+        environment.pop('FIREBASE_PROJECT_ID',None)
+        environment.pop('CONEXIA_LEGACY_AUTH',None)
+        result=subprocess.run([sys.executable,str(Path(__file__).parent/'server.py')],
+            env=environment,capture_output=True,timeout=10)
+        self.assertNotEqual(0,result.returncode)
+        self.assertIn(b'start_firebase.cmd',result.stderr)
+    def test_strict_json_content_type_and_origin(self):
+        for raw,content_type,status in [(b'{"email":"a","email":"b"}','application/json',400),
+                                        (b'{"value":NaN}','application/json',400),
+                                        (b'{}','text/plain',415)]:
+            req=Request(self.url+'/auth/login',data=raw,headers={'Content-Type':content_type},method='POST')
+            with self.assertRaises(HTTPError) as cm: urlopen(req,timeout=5)
+            self.assertEqual(status,cm.exception.code)
+            self.assertIsNotNone(cm.exception.headers.get('X-Request-ID'))
+            cm.exception.close()
+        req=Request(self.url+'/health',headers={'Origin':'https://untrusted.example'})
+        with self.assertRaises(HTTPError) as cm: urlopen(req,timeout=5)
+        self.assertEqual(403,cm.exception.code)
+        cm.exception.close()
+
+    def test_http_creation_replay_returns_one_post(self):
+        body={'name':'Replay','email':'replay@example.com','birth':'2000-01-01','password':'test password at least twelve'}
+        _,result,_=self.request('/auth/register','POST',body)
+        self.request('/auth/verify','POST',{'token':result['developmentToken']})
+        _,session,_=self.request('/auth/login','POST',body)
+        results=[]
+        for _ in range(2):
+            req=Request(self.url+'/posts',data=b'{"text":"only once"}',headers={
+                'Content-Type':'application/json','Authorization':'Bearer '+session['accessToken'],
+                'Idempotency-Key':'http_operation_123456'},method='POST')
+            with urlopen(req,timeout=5) as response: results.append(json.loads(response.read()))
+        self.assertEqual(results[0],results[1])
+        _,feed,_=self.request('/posts',bearer=session['accessToken'])
+        self.assertEqual(1,len(feed['items']))
     @classmethod
     def tearDownClass(cls):
         cls.server.shutdown(); cls.server.server_close(); cls.thread.join()

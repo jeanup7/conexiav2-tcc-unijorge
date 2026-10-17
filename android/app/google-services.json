@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "266186001954",
+    "project_id": "conexiabeta2",
+    "storage_bucket": "conexiabeta2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:266186001954:android:860fcaa56c5e3ff179047b",
+        "android_client_info": {
+          "package_name": "com.example.teste_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDa02-ZIUXEcHT_FkmozL5_GYtlh972O5A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

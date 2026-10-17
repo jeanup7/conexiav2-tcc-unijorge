@@ -1,54 +1,210 @@
+import '../../widgets/design_system.dart';
+import '../../theme/design_tokens.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
+import '../../models/models.dart';
+import '../../state/preview_store.dart';
 import '../../widgets/common.dart';
+import '../../widgets/social/post_gallery.dart';
+import 'composer_screen.dart';
 import 'feed_screen.dart';
+import 'user_profile_screen.dart';
 
-/// Visual sandbox: no authenticated API calls, no change to account approval.
-class FeedPreviewScreen extends StatelessWidget {
+class FeedPreviewScreen extends StatefulWidget {
   const FeedPreviewScreen({super.key});
-
-  static bool get available => kDebugMode &&
+  static bool get available =>
+      kDebugMode &&
       (!kIsWeb || const {'localhost', '127.0.0.1'}.contains(Uri.base.host));
+  @override
+  State<FeedPreviewScreen> createState() => _FeedPreviewScreenState();
+}
 
+class _FeedPreviewScreenState extends State<FeedPreviewScreen> {
+  final store = PreviewStore();
+  final query = TextEditingController();
+  int tab = 0;
+  @override
+  void dispose() {
+    store.dispose();
+    query.dispose();
+    super.dispose();
+  }
+
+  void created(Publication post) {
+    store.add(post);
+    setState(() => tab = 0);
+  }
+
+  Widget search() => Column(
+    children: [
+      Padding(
+        padding: const EdgeInsets.all(16),
+        child: TextField(
+          controller: query,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+            labelText: 'Pesquisar perfis da prévia',
+            prefixIcon: Icon(LucideIcons.search),
+          ),
+        ),
+      ),
+      Expanded(
+        child: AnimatedBuilder(
+          animation: store,
+          builder: (_, _) {
+            final found = store.profiles
+                .where(
+                  (p) =>
+                      p.name.toLowerCase().contains(query.text.toLowerCase()),
+                )
+                .toList();
+            return found.isEmpty
+                ? const EmptyState(message: 'Nenhum perfil encontrado.')
+                : ListView(
+                    children: found
+                        .map(
+                          (p) => ListTile(
+                            leading: SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: ClipOval(
+                                child: p.photo == null
+                                    ? const ColoredBox(
+                                        color: Color(0xFFEBEDFC),
+                                        child: Icon(LucideIcons.userRound),
+                                      )
+                                    : PostPhotoView(photo: p.photo!),
+                              ),
+                            ),
+                            title: Text(p.name),
+                            subtitle: const Text('Perfil de demonstração'),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => UserProfileScreen(
+                                  userId: p.id,
+                                  store: store,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  );
+          },
+        ),
+      ),
+    ],
+  );
   @override
   Widget build(BuildContext context) {
-    if (!available) {
-      return const Scaffold(body: EmptyState(message: 'A prévia está disponível apenas no desenvolvimento local.'));
+    if (!FeedPreviewScreen.available) {
+      return const Scaffold(
+        body: EmptyState(
+          message: 'A prévia está disponível apenas no desenvolvimento local.',
+        ),
+      );
     }
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFC),
+      backgroundColor: ConexiaColors.canvas,
       appBar: AppBar(
         centerTitle: true,
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        title: const Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.shield_rounded, color: Color(0xFF6265ED), size: 22),
-          SizedBox(width: 7),
-          Text('conexia', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800, letterSpacing: -1.2)),
-        ]),
-        actions: [IconButton(
-          tooltip: 'Sobre a prévia',
-          icon: const Icon(Icons.info_outline_rounded, size: 23),
-          onPressed: () => showDialog<void>(context: context, builder: (context) => AlertDialog(
-            title: const Text('Uma prévia para experimentar'),
-            content: const Text('As quatro fotos enviadas foram incluídas nos arquivos do projeto. Perfis e publicações são demonstrativos; curtidas, comentários e posts ficam em memória. Nenhuma ação é enviada ao servidor. Salvos duram apenas nesta sessão.'),
-            actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Entendi'))],
-          )),
-        ),],
+        title: const BrandMark(compact: true),
+        actions: [
+          IconButton(
+            tooltip: 'Sobre a prévia',
+            icon: const Icon(LucideIcons.info),
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Prévia local'),
+                content: const Text(
+                  'Perfis, fotos e interações são de demonstração. Alterações permanecem entre as abas, mas são descartadas quando você sai da prévia. Nenhuma chamada ao servidor é feita.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Entendi'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
-      body: ContentFrame(width: 600, child: Column(children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-          decoration: const BoxDecoration(color: Color(0xFFF0F1FE), border: Border(bottom: BorderSide(color: Color(0xFFE6E8FA)))),
-          child: const Row(children: [
-            Icon(Icons.science_outlined, size: 14, color: Color(0xFF6A6DB0)),
-            SizedBox(width: 7),
-            Expanded(child: Text('PRÉVIA LOCAL • Conteúdo de demonstração', style: TextStyle(fontSize: 11, color: Color(0xFF6A6DB0)))),
-          ]),
+      body: ContentFrame(
+        width: 600,
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              color: const Color(0xFFF0F1FE),
+              child: const Text(
+                'PRÉVIA LOCAL • Conteúdo de demonstração',
+                style: TextStyle(fontSize: 11, color: Color(0xFF6A6DB0)),
+              ),
+            ),
+            Expanded(
+              child: IndexedStack(
+                index: tab,
+                children: [
+                  FeedScreen(preview: true, previewStore: store),
+                  search(),
+                  ComposerScreen(
+                    preview: true,
+                    embedded: true,
+                    onCreated: created,
+                  ),
+                  const Center(
+                    child: EmptyState(
+                      message: 'Conversas reais ficam no aplicativo autenticado. Esta prévia não envia mensagens.',
+                      icon: LucideIcons.messageCircle,
+                    ),
+                  ),
+                  UserProfileScreen(
+                    userId: 'preview-self',
+                    store: store,
+                    embedded: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const Expanded(child: FeedScreen(preview: true)),
-      ])),
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: tab,
+        onDestinationSelected: (i) => setState(() => tab = i),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(LucideIcons.house),
+            selectedIcon: Icon(LucideIcons.house),
+            label: 'Feed',
+          ),
+          NavigationDestination(
+            icon: Icon(LucideIcons.search),
+            label: 'Pesquisa',
+          ),
+          NavigationDestination(
+            icon: Icon(LucideIcons.squarePlus),
+            label: 'Criar',
+          ),
+          NavigationDestination(
+            icon: Icon(LucideIcons.messageCircle),
+            label: 'Mensagens',
+          ),
+          NavigationDestination(
+            icon: Icon(LucideIcons.userRound),
+            label: 'Perfil',
+          ),
+        ],
+      ),
     );
   }
 }
