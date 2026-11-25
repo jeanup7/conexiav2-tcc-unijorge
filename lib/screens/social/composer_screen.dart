@@ -335,7 +335,7 @@ class _ComposerScreenState extends State<ComposerScreen> {
           if (widget.story)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 16),
-              child: Text('Este story expira em 24 horas.'),
+              child: Text('Este recorte expira em 24 horas.'),
             ),
           if (error != null) InlineNotice(message: error!, error: true),
           const SizedBox(height: 20),
@@ -359,7 +359,7 @@ class _ComposerScreenState extends State<ComposerScreen> {
                 widget.postId != null
                     ? 'Editar publicação'
                     : widget.story
-                    ? 'Novo story'
+                    ? 'Novo recorte'
                     : 'Criar publicação',
               ),
             ),

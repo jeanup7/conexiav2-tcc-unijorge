@@ -14,8 +14,8 @@ class BrandMark extends StatelessWidget {
         width: compact ? 28 : 36,
         height: compact ? 28 : 36,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [ConexiaColors.brand, Color(0xFF7779E7)],
+          gradient: LinearGradient(
+            colors: [ConexiaColors.brand, Color(0xFF537E63)],
           ),
           borderRadius: BorderRadius.circular(compact ? 9 : 12),
         ),
@@ -25,7 +25,7 @@ class BrandMark extends StatelessWidget {
           size: compact ? 18 : 23,
         ),
       ),
-      const SizedBox(width: 10),
+      SizedBox(width: 10),
       Flexible(
         child: Text(
           'conexia',
@@ -61,10 +61,10 @@ class SurfaceCard extends StatelessWidget {
       boxShadow: ConexiaColors.shadow,
     ),
     child: Material(
-      color: Colors.white,
+      color: ConexiaPalette.of(context).surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: ConexiaColors.line),
+        side: BorderSide(color: ConexiaPalette.of(context).line),
       ),
       clipBehavior: Clip.antiAlias,
       child: Ink(
@@ -88,9 +88,11 @@ class StatusPill extends StatelessWidget {
   final bool positive;
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
     decoration: BoxDecoration(
-      color: positive ? ConexiaColors.mint : ConexiaColors.lavender,
+      color: positive
+          ? ConexiaPalette.of(context).positiveSurface
+          : ConexiaPalette.of(context).tinted,
       borderRadius: BorderRadius.circular(100),
     ),
     child: Row(
@@ -99,14 +101,18 @@ class StatusPill extends StatelessWidget {
         Icon(
           icon,
           size: 14,
-          color: positive ? ConexiaColors.green : ConexiaColors.brand,
+          color: positive
+              ? ConexiaPalette.of(context).positive
+              : ConexiaPalette.of(context).primary,
         ),
-        const SizedBox(width: 5),
+        SizedBox(width: 5),
         Flexible(
           child: Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: positive ? ConexiaColors.green : ConexiaColors.brand,
+              color: positive
+                  ? ConexiaPalette.of(context).positive
+                  : ConexiaPalette.of(context).primary,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -164,7 +170,7 @@ class BusyButton extends StatelessWidget {
         duration: ConexiaMotion.duration(context, 160),
         child: busy
             ? Row(
-                key: const ValueKey('busy'),
+                key: ValueKey('busy'),
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox.square(
@@ -176,17 +182,17 @@ class BusyButton extends StatelessWidget {
                           : null,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   Text(label),
                 ],
               )
             : Row(
-                key: const ValueKey('ready'),
+                key: ValueKey('ready'),
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Flexible(child: Text(label, textAlign: TextAlign.center)),
                   if (icon != null) ...[
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     Icon(icon, size: 18),
                   ],
                 ],
@@ -204,9 +210,11 @@ class InlineNotice extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     liveRegion: true,
     child: Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: error ? const Color(0xFFFFEEF1) : ConexiaColors.lavender,
+        color: error
+            ? Theme.of(context).colorScheme.errorContainer
+            : ConexiaPalette.of(context).tinted,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -215,14 +223,18 @@ class InlineNotice extends StatelessWidget {
           Icon(
             error ? Icons.error_outline : Icons.info_outline,
             size: 19,
-            color: error ? ConexiaColors.danger : ConexiaColors.brand,
+            color: error
+                ? Theme.of(context).colorScheme.onErrorContainer
+                : ConexiaPalette.of(context).primary,
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: error ? ConexiaColors.danger : ConexiaColors.ink,
+                color: error
+                    ? Theme.of(context).colorScheme.onErrorContainer
+                    : ConexiaPalette.of(context).text,
               ),
             ),
           ),
@@ -242,17 +254,17 @@ class ListSkeleton extends StatelessWidget {
     child: ExcludeSemantics(
       child: Skeletonizer.zone(
         effect: MediaQuery.disableAnimationsOf(context)
-            ? const SolidColorEffect(color: ConexiaColors.line)
-            : const ShimmerEffect(
-                baseColor: ConexiaColors.line,
-                highlightColor: Colors.white,
+            ? SolidColorEffect(color: ConexiaPalette.of(context).line)
+            : ShimmerEffect(
+                baseColor: ConexiaPalette.of(context).line,
+                highlightColor: ConexiaPalette.of(context).surface,
                 duration: Duration(milliseconds: 1500),
               ),
         child: ListView.separated(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(20),
           itemCount: 5,
-          separatorBuilder: (_, _) => const SizedBox(height: 14),
-          itemBuilder: (_, _) => const SurfaceCard(
+          separatorBuilder: (_, _) => SizedBox(height: 14),
+          itemBuilder: (_, _) => SurfaceCard(
             padding: EdgeInsets.all(18),
             child: Row(
               children: [
@@ -305,17 +317,13 @@ class MediaSkeleton extends StatelessWidget {
     child: ExcludeSemantics(
       child: Skeletonizer.zone(
         effect: MediaQuery.disableAnimationsOf(context)
-            ? const SolidColorEffect(color: ConexiaColors.line)
-            : const ShimmerEffect(
-                baseColor: ConexiaColors.line,
-                highlightColor: ConexiaColors.canvas,
+            ? SolidColorEffect(color: ConexiaPalette.of(context).line)
+            : ShimmerEffect(
+                baseColor: ConexiaPalette.of(context).line,
+                highlightColor: ConexiaPalette.of(context).background,
                 duration: Duration(milliseconds: 1500),
               ),
-        child: SizedBox(
-          height: height,
-          width: double.infinity,
-          child: const Bone(),
-        ),
+        child: SizedBox(height: height, width: double.infinity, child: Bone()),
       ),
     ),
   );

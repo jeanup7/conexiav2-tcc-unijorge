@@ -250,7 +250,16 @@ class AppState extends ChangeNotifier {
     if (childRegistration == null) {
       throw const ApiException('Cadastro Firebase de menores indisponível.');
     }
-    return childRegistration!.create(
+    // Revalidate before creating a separate Firebase identity. A stale UI must
+    // not create an orphan identity for an unverified or suspended guardian.
+    final guardian = Account.fromJson(await api.request('GET', '/me'));
+    _check(version);
+    if (guardian.needsGuardian || !guardian.active) {
+      throw const ApiException(
+        'Use uma conta de responsável adulta, ativa e com e-mail confirmado.',
+      );
+    }
+    final sent = await childRegistration!.create(
       data['email'] as String,
       data['password'] as String,
       (token) async {
@@ -261,8 +270,11 @@ class AppState extends ChangeNotifier {
           'birth': data['birth'],
           'consent': true,
         });
+        _check(version);
       },
     );
+    _check(version);
+    return sent;
   }
 
   Future<void> deleteAccount(String password) async {
@@ -280,6 +292,15 @@ class AppState extends ChangeNotifier {
     );
     _check(version);
     await clearSession();
+  }
+
+  Future<void> sendVerificationEmail() async {
+    final version = api.sessionVersion;
+    if (auth == null || !auth!.signedIn) {
+      throw const ApiException('Entre para confirmar seu e-mail.');
+    }
+    await _auth(version, () => auth!.sendVerification());
+    _check(version);
   }
 
   Future<bool> refresh() {

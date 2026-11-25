@@ -1,151 +1,154 @@
 import 'package:flutter/material.dart';
-import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'design_tokens.dart';
 
-ThemeData conexiaTheme() {
+ThemeData conexiaTheme({Brightness brightness = Brightness.light}) {
+  final dark = brightness == Brightness.dark;
   GoogleFonts.config.allowRuntimeFetching = false;
   final scheme = ColorScheme.fromSeed(
     seedColor: ConexiaColors.brand,
-    primary: ConexiaColors.brand,
-    onPrimary: Colors.white,
-    primaryContainer: ConexiaColors.lavender,
-    onPrimaryContainer: ConexiaColors.ink,
-    secondary: ConexiaColors.green,
-    onSecondary: Colors.white,
-    secondaryContainer: ConexiaColors.mint,
-    onSecondaryContainer: ConexiaColors.green,
-    error: ConexiaColors.danger,
-    surface: ConexiaColors.canvas,
+    brightness: brightness,
+    primary: dark ? const Color(0xFFA6D9C3) : ConexiaColors.brand,
+    onPrimary: dark ? const Color(0xFF12382B) : Colors.white,
+    surface: dark ? const Color(0xFF111916) : ConexiaColors.canvas,
+    onSurface: dark ? const Color(0xFFE5EFE9) : ConexiaColors.ink,
+    surfaceContainer: dark ? const Color(0xFF1B2620) : Colors.white,
+    primaryContainer: dark ? const Color(0xFF293D32) : ConexiaColors.lavender,
+    onPrimaryContainer: dark ? const Color(0xFFD5E9DB) : ConexiaColors.ink,
   );
-  final base = FlexThemeData.light(
+  final base = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
-    subThemesData: const FlexSubThemesData(
-      defaultRadius: 16,
-      inputDecoratorIsFilled: true,
-      navigationBarHeight: 72,
-    ),
+    brightness: brightness,
   );
   return base.copyWith(
-    scaffoldBackgroundColor: ConexiaColors.canvas,
+    scaffoldBackgroundColor: scheme.surface,
     splashFactory: InkSparkle.splashFactory,
-    dividerTheme: const DividerThemeData(
-      color: ConexiaColors.line,
+    dividerTheme: DividerThemeData(
+      color: scheme.outlineVariant,
       thickness: 1,
       space: 1,
     ),
-    iconTheme: const IconThemeData(color: ConexiaColors.ink, size: 22),
+    iconTheme: IconThemeData(color: scheme.onSurface, size: 22),
     pageTransitionsTheme: PageTransitionsTheme(
       builders: {
-        ...const PageTransitionsTheme().builders,
+        ...PageTransitionsTheme().builders,
         TargetPlatform.android: const _ConexiaTransitions(),
         TargetPlatform.windows: const _ConexiaTransitions(),
         TargetPlatform.linux: const _ConexiaTransitions(),
       },
     ),
-    listTileTheme: const ListTileThemeData(
+    listTileTheme: ListTileThemeData(
       contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      iconColor: ConexiaColors.brand,
+      iconColor: scheme.primary,
       minVerticalPadding: 12,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
     ),
     dialogTheme: DialogThemeData(
-      backgroundColor: Colors.white,
+      backgroundColor: scheme.surfaceContainer,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
     ),
-    progressIndicatorTheme: const ProgressIndicatorThemeData(
-      color: ConexiaColors.brand,
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: scheme.primary,
       strokeWidth: 2.5,
     ),
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       centerTitle: true,
-      backgroundColor: Colors.white,
+      backgroundColor: scheme.surfaceContainer,
       toolbarHeight: 64,
-      foregroundColor: ConexiaColors.ink,
+      foregroundColor: scheme.onSurface,
       elevation: 0,
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
     ),
     inputDecorationTheme: InputDecorationTheme(
-      labelStyle: const TextStyle(color: ConexiaColors.muted, fontSize: 14),
-      hintStyle: const TextStyle(color: ConexiaColors.muted, fontSize: 14),
-      prefixIconColor: ConexiaColors.muted,
-      suffixIconColor: ConexiaColors.muted,
+      labelStyle: TextStyle(color: scheme.onSurfaceVariant, fontSize: 14),
+      hintStyle: TextStyle(color: scheme.onSurfaceVariant, fontSize: 14),
+      prefixIconColor: scheme.onSurfaceVariant,
+      suffixIconColor: scheme.onSurfaceVariant,
       filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      fillColor: scheme.surfaceContainer,
+      contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: ConexiaColors.brand, width: 1.6),
+        borderSide: BorderSide(color: scheme.primary, width: 1.6),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: ConexiaColors.danger),
+        borderSide: BorderSide(color: scheme.error),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: ConexiaColors.danger, width: 1.6),
+        borderSide: BorderSide(color: scheme.error, width: 1.6),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFFE4E8F3)),
+        borderSide: BorderSide(color: scheme.outlineVariant),
       ),
     ),
     cardTheme: CardThemeData(
-      color: Colors.white,
+      color: scheme.surfaceContainer,
       elevation: 1,
-      shadowColor: const Color(0x101C2940),
+      shadowColor: Color(0x101C2940),
       surfaceTintColor: Colors.transparent,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: Color(0xFFE4E8F3)),
+        side: BorderSide(color: scheme.outlineVariant),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: ConexiaColors.brand,
-        foregroundColor: Colors.white,
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
         textStyle: GoogleFonts.lato(
           fontSize: 15,
           fontWeight: FontWeight.w700,
           letterSpacing: .15,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: 22, vertical: 14),
         elevation: 0,
-        animationDuration: const Duration(milliseconds: 160),
-        minimumSize: const Size(48, 52),
+        animationDuration: Duration(milliseconds: 160),
+        minimumSize: Size(48, 52),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size(48, 50),
-        foregroundColor: ConexiaColors.ink,
-        side: const BorderSide(color: ConexiaColors.line),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        minimumSize: Size(48, 50),
+        foregroundColor: scheme.onSurface,
+        side: BorderSide(color: scheme.outlineVariant),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         textStyle: GoogleFonts.lato(fontSize: 14, fontWeight: FontWeight.w700),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        minimumSize: const Size(48, 44),
-        foregroundColor: ConexiaColors.brand,
+        minimumSize: Size(48, 44),
+        foregroundColor: scheme.primary,
         textStyle: GoogleFonts.lato(fontSize: 13, fontWeight: FontWeight.w700),
       ),
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: scheme.primary,
+      foregroundColor: scheme.onPrimary,
+      elevation: 0,
+      hoverElevation: 1,
+      focusElevation: 1,
+      highlightElevation: 0,
+      shape: const CircleBorder(),
     ),
     navigationBarTheme: NavigationBarThemeData(
       height: 76,
       elevation: 0,
       surfaceTintColor: Colors.transparent,
-      backgroundColor: Colors.white,
+      backgroundColor: scheme.surfaceContainer,
       indicatorColor: scheme.primary.withValues(alpha: .10),
       labelTextStyle: WidgetStateProperty.resolveWith(
         (states) => GoogleFonts.lato(
@@ -155,7 +158,7 @@ ThemeData conexiaTheme() {
               : FontWeight.w400,
           color: states.contains(WidgetState.selected)
               ? scheme.primary
-              : ConexiaColors.muted,
+              : scheme.onSurfaceVariant,
         ),
       ),
       iconTheme: WidgetStateProperty.resolveWith(
@@ -163,16 +166,16 @@ ThemeData conexiaTheme() {
           size: 23,
           color: states.contains(WidgetState.selected)
               ? scheme.primary
-              : ConexiaColors.muted,
+              : scheme.onSurfaceVariant,
         ),
       ),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: ConexiaColors.ink,
-      contentTextStyle: const TextStyle(
+      backgroundColor: scheme.onSurface,
+      contentTextStyle: TextStyle(
         fontSize: 14,
-        color: Colors.white,
+        color: scheme.surface,
         height: 1.45,
       ),
       elevation: 6,
@@ -182,40 +185,40 @@ ThemeData conexiaTheme() {
       bodyLarge: GoogleFonts.lato(
         fontSize: 16,
         height: 1.5,
-        color: ConexiaColors.ink,
+        color: scheme.onSurface,
       ),
       bodyMedium: GoogleFonts.lato(
         fontSize: 14,
         height: 1.5,
-        color: ConexiaColors.ink,
+        color: scheme.onSurface,
       ),
       bodySmall: GoogleFonts.lato(
         fontSize: 12,
         height: 1.5,
-        color: ConexiaColors.muted,
+        color: scheme.onSurfaceVariant,
       ),
       headlineSmall: GoogleFonts.lato(
         fontSize: 24,
         height: 1.2,
         fontWeight: FontWeight.w700,
         letterSpacing: -.65,
-        color: ConexiaColors.ink,
+        color: scheme.onSurface,
       ),
       titleMedium: GoogleFonts.lato(
         fontSize: 16,
         height: 1.3,
         fontWeight: FontWeight.w700,
-        color: ConexiaColors.ink,
+        color: scheme.onSurface,
       ),
       headlineMedium: GoogleFonts.lato(
         fontSize: 28,
         fontWeight: FontWeight.w900,
-        color: ConexiaColors.ink,
+        color: scheme.onSurface,
       ),
       titleLarge: GoogleFonts.lato(
         fontSize: 22,
         fontWeight: FontWeight.w700,
-        color: ConexiaColors.ink,
+        color: scheme.onSurface,
       ),
     ),
   );
@@ -236,9 +239,7 @@ class _ConexiaTransitions extends PageTransitionsBuilder {
     return FadeTransition(
       opacity: eased,
       child: SlideTransition(
-        position: eased.drive(
-          Tween(begin: const Offset(.035, 0), end: Offset.zero),
-        ),
+        position: eased.drive(Tween(begin: Offset(.035, 0), end: Offset.zero)),
         child: child,
       ),
     );

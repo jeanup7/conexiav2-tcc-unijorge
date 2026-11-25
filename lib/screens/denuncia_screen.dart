@@ -12,7 +12,18 @@ class DenunciaScreen extends StatefulWidget {
 class _DenunciaScreenState extends State<DenunciaScreen> {
   String? reason;
   final details = TextEditingController();
-  bool busy = false;
+  bool busy = false, notifyGuardian = false;
+  static const reasons = {
+    'Bullying ou ofensa': 'bullying',
+    'Contato indesejado': 'unwanted_contact',
+    'Exposição de informação pessoal': 'personal_information',
+    'Conteúdo inadequado': 'inappropriate_content',
+    'Discurso de ódio': 'hate',
+    'Ameaça ou violência': 'threat',
+    'Risco ou exploração de menores': 'child_safety',
+    'Golpe ou fraude': 'scam',
+    'Outro motivo': 'other',
+  };
   @override
   void dispose() {
     details.dispose();
@@ -20,6 +31,7 @@ class _DenunciaScreenState extends State<DenunciaScreen> {
   }
 
   Future<void> send() async {
+    if (busy) return;
     if (reason == null) {
       showFeedback(context, 'Escolha um motivo.');
       return;
@@ -30,6 +42,8 @@ class _DenunciaScreenState extends State<DenunciaScreen> {
           .request('POST', '/reports', {
             'target': widget.target ?? 'general',
             'reason': '$reason ${details.text}',
+            'category': reasons[reason],
+            'notifyGuardian': notifyGuardian,
           });
       if (!mounted) return;
       await showDialog<void>(
@@ -71,13 +85,7 @@ class _DenunciaScreenState extends State<DenunciaScreen> {
             'Não inclua dados pessoais desnecessários. Sua denúncia fica vinculada ao conteúdo ou perfil selecionado.',
           ),
           const SizedBox(height: 24),
-          ...[
-            'Bullying ou ofensa',
-            'Contato indesejado',
-            'Exposição de informação pessoal',
-            'Conteúdo inadequado',
-            'Outro motivo',
-          ].map(
+          ...reasons.keys.map(
             (v) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: ChoiceChip(
@@ -87,6 +95,18 @@ class _DenunciaScreenState extends State<DenunciaScreen> {
               ),
             ),
           ),
+          if (AppScope.of(context).account?.needsGuardian == true)
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Pedir apoio ao meu responsável'),
+              subtitle: const Text(
+                'Envia apenas um aviso de apoio. O texto da denúncia e suas mensagens não são enviados.',
+              ),
+              value: notifyGuardian,
+              onChanged: busy
+                  ? null
+                  : (value) => setState(() => notifyGuardian = value ?? false),
+            ),
           const SizedBox(height: 16),
           TextField(
             controller: details,

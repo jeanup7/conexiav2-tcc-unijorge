@@ -60,7 +60,10 @@ void main() {
             };
           } else if (request.method == 'PATCH') {
             expect(request.url.path, '/admin/reports/r');
-            expect(jsonDecode(request.body), {'action': 'dismiss'});
+            expect(jsonDecode(request.body), {
+              'action': 'dismiss',
+              'reason': 'Sem violação identificada.',
+            });
             decisions++;
             response = {'ok': true};
           } else {
@@ -95,9 +98,16 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Denúncia de teste'), findsOneWidget);
+    await tester.ensureVisible(find.text('Arquivar'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Arquivar'));
     await tester.pumpAndSettle();
     expect(decisions, 0);
+    await tester.enterText(
+      find.byType(TextField),
+      'Sem violação identificada.',
+    );
+    await tester.pump();
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
     expect(decisions, 1);

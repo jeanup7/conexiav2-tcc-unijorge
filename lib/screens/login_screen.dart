@@ -46,19 +46,19 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     body: DecoratedBox(
-      decoration: const BoxDecoration(gradient: ConexiaColors.hero),
+      decoration: BoxDecoration(gradient: ConexiaPalette.of(context).hero),
       child: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: BoxConstraints(maxWidth: 480),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: PageReveal(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Center(child: BrandMark()),
-                    const SizedBox(height: 28),
+                    Center(child: BrandMark()),
+                    SizedBox(height: 28),
                     Text(
                       'Seu mundo.\nBoas conexões.',
                       textAlign: TextAlign.center,
@@ -69,16 +69,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             letterSpacing: -1.1,
                           ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     Text(
                       'Um espaço para criar, aprender e crescer junto.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium
-                          ?.copyWith(color: ConexiaColors.muted),
+                          ?.copyWith(color: ConexiaPalette.of(context).muted),
                     ),
-                    const SizedBox(height: 28),
+                    SizedBox(height: 28),
                     SurfaceCard(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(24),
                       child: Form(
                         key: form,
                         child: Column(
@@ -88,18 +88,18 @@ class _LoginScreenState extends State<LoginScreen> {
                               'Bem-vindo de volta',
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
-                            const SizedBox(height: 6),
+                            SizedBox(height: 6),
                             Text(
                               'Entre para continuar suas conexões.',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
-                            const SizedBox(height: 24),
+                            SizedBox(height: 24),
                             TextFormField(
                               controller: email,
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
-                              autofillHints: const [AutofillHints.username],
-                              decoration: const InputDecoration(
+                              autofillHints: [AutofillHints.username],
+                              decoration: InputDecoration(
                                 labelText: 'E-mail',
                                 prefixIcon: Icon(Icons.alternate_email),
                               ),
@@ -107,15 +107,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ? 'Informe seu e-mail'
                                   : null,
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             TextFormField(
                               controller: password,
                               obscureText: obscure,
                               textInputAction: TextInputAction.done,
-                              autofillHints: const [AutofillHints.password],
+                              autofillHints: [AutofillHints.password],
                               decoration: InputDecoration(
                                 labelText: 'Senha',
-                                prefixIcon: const Icon(Icons.lock_outline),
+                                prefixIcon: Icon(Icons.lock_outline),
                                 suffixIcon: IconButton(
                                   tooltip: obscure
                                       ? 'Mostrar senha'
@@ -144,18 +144,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                     : () => Navigator.push(
                                         context,
                                         MaterialPageRoute<void>(
-                                          builder: (_) =>
-                                              const VerificationScreen(
-                                                recovery: true,
-                                              ),
+                                          builder: (_) => VerificationScreen(
+                                            recovery: true,
+                                          ),
                                         ),
                                       ),
-                                child: const Text('Esqueci minha senha'),
+                                child: Text('Esqueci minha senha'),
                               ),
                             ),
                             if (error != null) ...[
                               InlineNotice(message: error!, error: true),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 16),
                             ],
                             BusyButton(
                               label: busy ? 'Entrando…' : 'Entrar',
@@ -163,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: login,
                               icon: Icons.arrow_forward_rounded,
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12),
                             OutlinedButton.icon(
                               onPressed: busy
                                   ? null
@@ -171,15 +170,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                       context,
                                       '/cadastro',
                                     ),
-                              icon: const Icon(Icons.person_add_alt, size: 19),
-                              label: const Text('Criar uma conta'),
+                              icon: Icon(Icons.person_add_alt, size: 19),
+                              label: Text('Criar uma conta'),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    const Center(
+                    SizedBox(height: 20),
+                    Center(
                       child: StatusPill(
                         label: 'Privacidade desde a primeira conexão',
                         positive: true,
@@ -192,13 +191,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             : () => Navigator.push(
                                 context,
                                 MaterialPageRoute<void>(
-                                  builder: (_) => const FeedPreviewScreen(),
+                                  builder: (_) => FeedPreviewScreen(),
                                 ),
                               ),
-                        icon: const Icon(Icons.visibility_outlined, size: 18),
-                        label: const Text('Ver prévia do feed'),
+                        icon: Icon(Icons.visibility_outlined, size: 18),
+                        label: Text('Ver prévia do feed'),
                       ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(
                       'Conexia Segura • Crie. Conecte. Cuide.',
                       textAlign: TextAlign.center,

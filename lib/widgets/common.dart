@@ -18,17 +18,17 @@ void showFeedback(BuildContext context, Object message) {
       SnackBar(
         content: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.info_outline_rounded,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               size: 20,
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(child: Text(message.toString())),
           ],
         ),
         showCloseIcon: true,
-        closeIconColor: Colors.white,
+        closeIconColor: Theme.of(context).colorScheme.surface,
       ),
     );
 }
@@ -57,26 +57,30 @@ class EmptyState extends StatelessWidget {
   final IconData icon;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(32),
+    padding: EdgeInsets.all(32),
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-            color: ConexiaColors.lavender,
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: ConexiaPalette.of(context).tinted,
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 30, color: ConexiaColors.brand),
+          child: Icon(
+            icon,
+            size: 30,
+            color: ConexiaPalette.of(context).primary,
+          ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 340),
+          constraints: BoxConstraints(maxWidth: 340),
           child: Text(
             message,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium
-                ?.copyWith(color: ConexiaColors.muted),
+                ?.copyWith(color: ConexiaPalette.of(context).muted),
           ),
         ),
       ],
@@ -104,6 +108,7 @@ class _AsyncItemsState extends State<AsyncItems> {
   void initState() {
     super.initState();
     future = Future.sync(widget.load);
+    future.ignore();
   }
 
   @override
@@ -121,16 +126,18 @@ class _AsyncItemsState extends State<AsyncItems> {
                     icon: Icons.cloud_off,
                   ),
                   TextButton(
-                    onPressed: () =>
-                        setState(() => future = Future.sync(widget.load)),
-                    child: const Text('Tentar novamente'),
+                    onPressed: () => setState(() {
+                      future = Future.sync(widget.load);
+                      future.ignore();
+                    }),
+                    child: Text('Tentar novamente'),
                   ),
                 ],
               ),
             );
           }
           if (!snapshot.hasData) {
-            return const ListSkeleton();
+            return ListSkeleton();
           }
           if (snapshot.data!.isEmpty) {
             return SingleChildScrollView(
@@ -138,7 +145,7 @@ class _AsyncItemsState extends State<AsyncItems> {
             );
           }
           return ListView.builder(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: EdgeInsets.symmetric(vertical: 8),
             itemCount: snapshot.data!.length,
             itemBuilder: (context, index) =>
                 widget.builder(context, snapshot.data![index]),

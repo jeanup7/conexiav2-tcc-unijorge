@@ -15,11 +15,13 @@ import 'package:teste_app/screens/social/feed_screen.dart';
 import 'package:teste_app/state/app_state.dart';
 import 'package:teste_app/theme/app_theme.dart';
 import 'package:teste_app/widgets/design_system.dart';
+import 'package:teste_app/widgets/common.dart';
+import 'package:teste_app/models/models.dart';
+import 'package:teste_app/widgets/social/profile_heading.dart';
 
 import 'audit_improvements_test.dart' show account, app, jsonResponse;
 
 const boundaryKey = ValueKey('visual-capture');
-
 Future<void> capture(WidgetTester tester, String name) async {
   if (!const bool.fromEnvironment('CAPTURE_UI')) return;
   await tester.runAsync(
@@ -29,6 +31,8 @@ Future<void> capture(WidgetTester tester, String name) async {
   final boundary = tester.renderObject<RenderRepaintBoundary>(
     find.byKey(boundaryKey),
   );
+  boundary.markNeedsPaint();
+  await tester.pump();
   await tester.runAsync(() async {
     final image = await boundary.toImage(pixelRatio: 2);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -65,7 +69,119 @@ void main() {
       );
     await Future.wait([material.load(), lucide.load()]);
   });
-
+  testWidgets('dark feed preserves media and clear navigation', (tester) async {
+    viewport(tester);
+    final state = AppState(
+      api: ApiClient(
+        client: MockClient((_) async => throw StateError('Local preview')),
+      ),
+    );
+    addTearDown(state.dispose);
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: boundaryKey,
+        child: AppScope(
+          state: state,
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: conexiaTheme(brightness: Brightness.dark),
+            home: const FeedPreviewScreen(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      Theme.of(tester.element(find.byType(NavigationBar))).brightness,
+      Brightness.dark,
+    );
+    expect(find.byType(ColorFiltered), findsNothing);
+    expect(find.byTooltip('Criar publicação'), findsOneWidget);
+    await capture(tester, 'feed_dark');
+    await tester.tap(find.text('Perfil'));
+    await tester.pumpAndSettle();
+    expect(find.text('Criar primeira publicação'), findsOneWidget);
+    await capture(tester, 'profile_dark');
+    await tester.tap(find.text('Criar primeira publicação'));
+    await tester.pumpAndSettle();
+    expect(find.text('Criar publicação'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('recortes handle large captions, safe areas and expired pages', (
+    tester,
+  ) async {
+    viewport(tester);
+    tester.view.physicalSize = const Size(320, 720);
+    final recortes = [
+      Publication(
+        id: 'first',
+        userId: 'a',
+        author: 'Autor do recorte',
+        text: List.filled(25, 'Uma descoberta para compartilhar.').join(' '),
+        likes: 0,
+        liked: false,
+        assetImage: 'assets/feed/luffy.jpg',
+      ),
+      const Publication(
+        id: 'expired',
+        userId: 'b',
+        author: 'Outro autor',
+        text: 'Conteúdo expirado',
+        likes: 0,
+        liked: false,
+        expires: 1,
+      ),
+    ];
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: boundaryKey,
+        child: MaterialApp(
+          theme: conexiaTheme(),
+          home: MediaQuery(
+            data: const MediaQueryData(
+              textScaler: TextScaler.linear(1.8),
+              padding: EdgeInsets.only(top: 30, bottom: 20),
+            ),
+            child: StoryViewer(stories: recortes, initial: 0, preview: true),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Recortes'), findsOneWidget);
+    expect(find.byType(SafeArea), findsWidgets);
+    expect(tester.takeException(), isNull);
+    await capture(tester, 'recorte');
+    await tester.tap(find.byTooltip('Próximo recorte'));
+    await tester.pumpAndSettle();
+    expect(find.text('Este recorte expirou.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('empty profile CTA remains usable with enlarged text', (
+    tester,
+  ) async {
+    viewport(tester);
+    tester.view.physicalSize = const Size(320, 568);
+    var created = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: conexiaTheme(brightness: Brightness.dark),
+        home: Scaffold(
+          body: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(1.8)),
+            child: SingleChildScrollView(
+              child: FirstPublication(onCreate: () => created = true),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Criar primeira publicação'));
+    await tester.tap(find.text('Criar primeira publicação'));
+    expect(created, isTrue);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('mobile login remains scrollable with keyboard and large text', (
     tester,
   ) async {
@@ -102,7 +218,6 @@ void main() {
     expect(find.text('Informe seu e-mail'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
-
   testWidgets(
     'mobile feed and profile keep navigation usable after restyling',
     (tester) async {
@@ -126,15 +241,16 @@ void main() {
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -420));
       await tester.pumpAndSettle();
       await capture(tester, 'post');
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Perfil'));
       await tester.tap(find.text('Perfil'));
       await tester.pumpAndSettle();
       await capture(tester, 'profile');
-      expect(find.textContaining('perfil de demonstração'), findsOneWidget);
+      expect(find.text('publicações'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
-
   testWidgets('family surface fits large text and exposes the child actions', (
     tester,
   ) async {
@@ -180,7 +296,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
-
   testWidgets(
     'narrow feed supports enlarged text without losing its controls',
     (tester) async {
@@ -204,12 +319,18 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Feed'), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'Feed enlarged text');
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.textContaining('Explorar ·'), findsNothing);
+      await tester.pumpAndSettle();
+      expect(find.text('Escolha seu caminho.'), findsNothing);
+      await tester.ensureVisible(find.text('Perfil'));
+      await tester.tap(find.text('Perfil'));
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
-
   testWidgets(
     'reduced motion uses static placeholders and ignores repeated busy taps',
     (tester) async {

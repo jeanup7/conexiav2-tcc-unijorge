@@ -1,3 +1,5 @@
+import '../../theme/appearance.dart';
+import '../../widgets/social/conexia_compass.dart';
 import '../../widgets/design_system.dart';
 import '../../theme/design_tokens.dart';
 
@@ -41,11 +43,11 @@ class _FeedPreviewScreenState extends State<FeedPreviewScreen> {
   Widget search() => Column(
     children: [
       Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         child: TextField(
           controller: query,
           onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Pesquisar perfis da prévia',
             prefixIcon: Icon(LucideIcons.search),
           ),
@@ -62,7 +64,7 @@ class _FeedPreviewScreenState extends State<FeedPreviewScreen> {
                 )
                 .toList();
             return found.isEmpty
-                ? const EmptyState(message: 'Nenhum perfil encontrado.')
+                ? EmptyState(message: 'Nenhum perfil encontrado.')
                 : ListView(
                     children: found
                         .map(
@@ -72,15 +74,16 @@ class _FeedPreviewScreenState extends State<FeedPreviewScreen> {
                               height: 44,
                               child: ClipOval(
                                 child: p.photo == null
-                                    ? const ColoredBox(
-                                        color: Color(0xFFEBEDFC),
+                                    ? ColoredBox(
+                                        color: ConexiaPalette.of(context)
+                                            .tinted,
                                         child: Icon(LucideIcons.userRound),
                                       )
                                     : PostPhotoView(photo: p.photo!),
                               ),
                             ),
                             title: Text(p.name),
-                            subtitle: const Text('Perfil de demonstração'),
+                            subtitle: Text('Perfil de demonstração'),
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute<void>(
@@ -102,34 +105,45 @@ class _FeedPreviewScreenState extends State<FeedPreviewScreen> {
   @override
   Widget build(BuildContext context) {
     if (!FeedPreviewScreen.available) {
-      return const Scaffold(
+      return Scaffold(
         body: EmptyState(
           message: 'A prévia está disponível apenas no desenvolvimento local.',
         ),
       );
     }
     return Scaffold(
-      backgroundColor: ConexiaColors.canvas,
+      backgroundColor: ConexiaPalette.of(context).background,
       appBar: AppBar(
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: ConexiaPalette.of(context).surface,
         surfaceTintColor: Colors.transparent,
-        title: const BrandMark(compact: true),
+        title: BrandMark(compact: true),
         actions: [
           IconButton(
+            tooltip: 'Aparência',
+            icon: const Icon(Icons.contrast),
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              useSafeArea: true,
+              showDragHandle: true,
+              builder: (_) =>
+                  const SingleChildScrollView(child: AppearanceControl()),
+            ),
+          ),
+          IconButton(
             tooltip: 'Sobre a prévia',
-            icon: const Icon(LucideIcons.info),
+            icon: Icon(LucideIcons.info),
             onPressed: () => showDialog<void>(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Prévia local'),
-                content: const Text(
+                title: Text('Prévia local'),
+                content: Text(
                   'Perfis, fotos e interações são de demonstração. Alterações permanecem entre as abas, mas são descartadas quando você sai da prévia. Nenhuma chamada ao servidor é feita.',
                 ),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Entendi'),
+                    child: Text('Entendi'),
                   ),
                 ],
               ),
@@ -143,11 +157,14 @@ class _FeedPreviewScreenState extends State<FeedPreviewScreen> {
           children: [
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-              color: const Color(0xFFF0F1FE),
-              child: const Text(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              color: ConexiaPalette.of(context).tinted,
+              child: Text(
                 'PRÉVIA LOCAL • Conteúdo de demonstração',
-                style: TextStyle(fontSize: 11, color: Color(0xFF6A6DB0)),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: ConexiaPalette.of(context).primary,
+                ),
               ),
             ),
             Expanded(
@@ -156,12 +173,7 @@ class _FeedPreviewScreenState extends State<FeedPreviewScreen> {
                 children: [
                   FeedScreen(preview: true, previewStore: store),
                   search(),
-                  ComposerScreen(
-                    preview: true,
-                    embedded: true,
-                    onCreated: created,
-                  ),
-                  const Center(
+                  Center(
                     child: EmptyState(
                       message: 'Conversas reais ficam no aplicativo autenticado. Esta prévia não envia mensagens.',
                       icon: LucideIcons.messageCircle,
@@ -178,10 +190,23 @@ class _FeedPreviewScreenState extends State<FeedPreviewScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
+      floatingActionButton: FloatingActionButton.small(
+        tooltip: 'Criar publicação',
+        onPressed: () async {
+          final post = await Navigator.push<Publication>(
+            context,
+            MaterialPageRoute<Publication>(
+              builder: (_) => const ComposerScreen(preview: true),
+            ),
+          );
+          if (mounted && post != null) created(post);
+        },
+        child: const Icon(Icons.add),
+      ),
+      bottomNavigationBar: ConexiaCompass(
         selectedIndex: tab,
         onDestinationSelected: (i) => setState(() => tab = i),
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(LucideIcons.house),
             selectedIcon: Icon(LucideIcons.house),
@@ -190,10 +215,6 @@ class _FeedPreviewScreenState extends State<FeedPreviewScreen> {
           NavigationDestination(
             icon: Icon(LucideIcons.search),
             label: 'Pesquisa',
-          ),
-          NavigationDestination(
-            icon: Icon(LucideIcons.squarePlus),
-            label: 'Criar',
           ),
           NavigationDestination(
             icon: Icon(LucideIcons.messageCircle),

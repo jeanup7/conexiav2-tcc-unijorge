@@ -93,6 +93,10 @@ if __name__=='__main__':
     if not development:
         raise SystemExit('Email delivery and guardian provider are not configured. Use CONEXIA_DEV=1 for local development only.')
     root=Path(__file__).resolve().parent
+    if os.environ.get('FIREBASE_AUTH_EMULATOR_HOST') and (
+            not os.environ.get('DATABASE_PATH') or
+            Path(os.environ['DATABASE_PATH']).resolve()==(root/'conexia.sqlite3').resolve()):
+        raise SystemExit('O Auth Emulator exige um banco separado do banco principal.')
     if not os.environ.get('FIREBASE_PROJECT_ID') and os.environ.get('CONEXIA_LEGACY_AUTH')!='1':
         raise SystemExit('O aplicativo usa Firebase. Inicie pela pasta do projeto com .\\backend\\start_firebase.cmd. Para testes exclusivos da API legada, defina CONEXIA_LEGACY_AUTH=1 explicitamente.')
     firebase=None
@@ -101,15 +105,44 @@ if __name__=='__main__':
         try: firebase=FirebaseIdentity(os.environ['FIREBASE_PROJECT_ID'])
         except Exception:
             raise SystemExit('Configure GOOGLE_APPLICATION_CREDENTIALS com o arquivo privado da conta de serviço Firebase e instale backend/requirements.txt.')
+    media_storage=None
+    vision_models=None
+    if os.environ.get('CONEXIA_VISION_MODELS'):
+        from vision_models import VisionModels
+        try:vision_models=VisionModels(os.environ['CONEXIA_VISION_MODELS'])
+        except Exception:raise SystemExit('Modelos experimentais indisponíveis. Instale as dependências de visão e confira os checksums.')
+    bucket_name=os.environ.get('CONEXIA_MEDIA_BUCKET')
+    if bucket_name:
+        if not firebase:raise SystemExit('Configure Firebase Admin antes do armazenamento privado.')
+        from media_storage import FirebaseMediaStorage
+        try:media_storage=FirebaseMediaStorage(firebase.app,bucket_name)
+        except Exception:raise SystemExit('Bucket privado indisponível. Confira existência, permissões e prevenção de acesso público. Nenhum dado local foi migrado.')
     server=ThreadingHTTPServer(('127.0.0.1',int(os.environ.get('PORT','8080'))),Handler)
-    server.service=Service(Repository(os.environ.get('DATABASE_PATH',str(root/'conexia.sqlite3'))),development,firebase=firebase)
+    from enrollment_review import ReviewVault
+    review_key=Path(os.environ.get('CONEXIA_REVIEW_KEY_FILE',str(Path(os.environ.get('LOCALAPPDATA',str(Path.home()/'.local/share')))/'Conexia'/'review.key')))
+    repository=Repository(os.environ.get('DATABASE_PATH',str(root/'conexia.sqlite3')))
+    if not review_key.exists() and repository.one('SELECT 1 FROM review_photos LIMIT 1'):
+        raise SystemExit('A chave das capturas existentes não foi encontrada. Restaure a chave original; nenhuma chave substituta foi criada.')
+    review_vault=ReviewVault.local(review_key)
+    review_setting=os.environ.get('CONEXIA_REVIEW_REQUIRED','1')
+    if review_setting not in ('0','1'):raise SystemExit('CONEXIA_REVIEW_REQUIRED deve ser 0 ou 1; configuração inválida não desativa a revisão.')
+    server.service=Service(repository,development,firebase=firebase,media_storage=media_storage,integration_test=os.environ.get('CONEXIA_INTEGRATION_TEST')=='1',vision_models=vision_models,review_required=review_setting=='1',review_vault=review_vault)
     server.origins={v.strip() for v in os.environ.get('ALLOWED_ORIGINS','http://localhost:5300,http://127.0.0.1:5300').split(',') if v.strip()}
     stop=Event()
     def retry_deletions():
+        from time import monotonic
+        next_maintenance=0
         while not stop.is_set():
-            try: server.service.process_identity_deletions()
+            media_result={'uploaded':0,'deleted':0,'failed':0}
+            try:
+                if monotonic()>=next_maintenance:
+                    server.service.maintain()
+                    next_maintenance=monotonic()+3600
+                server.service.process_identity_deletions()
+                media_result=server.service.process_media_jobs()
+                if media_result['failed']:logging.warning('media_jobs_pending failures=%d',media_result['failed'])
             except Exception: logging.error('identity_deletion_worker_failed')
-            stop.wait(30)
+            stop.wait(1 if media_result['uploaded']+media_result['deleted']>0 and not media_result['failed'] else 30)
     worker=Thread(target=retry_deletions,daemon=True)
     worker.start()
     print(f'Conexia local API on http://127.0.0.1:{server.server_port}; Firebase Admin {"enabled" if firebase else "disabled (explicit legacy API mode)"}.',flush=True)

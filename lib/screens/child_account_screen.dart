@@ -78,6 +78,7 @@ class _ChildAccountState extends State<ChildAccountScreen> {
             child: Column(
               children: [
                 TextFormField(
+                  enabled: !busy,
                   controller: name,
                   maxLength: 60,
                   decoration: const InputDecoration(
@@ -88,6 +89,7 @@ class _ChildAccountState extends State<ChildAccountScreen> {
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
+                  enabled: !busy,
                   controller: email,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
@@ -132,6 +134,7 @@ class _ChildAccountState extends State<ChildAccountScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
+                  enabled: !busy,
                   controller: password,
                   obscureText: true,
                   decoration: const InputDecoration(
@@ -143,6 +146,7 @@ class _ChildAccountState extends State<ChildAccountScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
+                  enabled: !busy,
                   controller: confirm,
                   obscureText: true,
                   decoration: const InputDecoration(
@@ -161,13 +165,18 @@ class _ChildAccountState extends State<ChildAccountScreen> {
                     'Sou responsável por este menor e autorizo o vínculo e o acesso após as confirmações.',
                   ),
                 ),
-                if (error != null)
+                if (error != null) ...[
+                  const Text(
+                    'Se a tentativa anterior criou a conta, retome usando o mesmo e-mail, senha e data de nascimento. A confirmação de e-mail não comprova idade ou parentesco.',
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     error!,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
                   ),
+                ],
                 const SizedBox(height: 16),
                 BusyButton(
                   onPressed: submit,

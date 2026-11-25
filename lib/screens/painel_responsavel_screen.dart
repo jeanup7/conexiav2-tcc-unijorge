@@ -2,6 +2,9 @@ import '../widgets/design_system.dart';
 import '../theme/design_tokens.dart';
 import 'family_activity_screen.dart';
 import 'contact_requests_screen.dart';
+import 'school_screen.dart';
+import 'vision_screen.dart';
+import 'enrollment_review_screen.dart';
 
 import 'package:flutter/material.dart';
 
@@ -53,7 +56,7 @@ class _FamilyState extends State<PainelResponsavelScreen> {
     final state = AppScope.of(context);
     final user = state.account;
     if (user == null) {
-      return const Scaffold(
+      return Scaffold(
         body: EmptyState(message: 'Entre para acessar sua família.'),
       );
     }
@@ -65,20 +68,20 @@ class _FamilyState extends State<PainelResponsavelScreen> {
           IconButton(
             onPressed: refresh,
             tooltip: 'Atualizar família',
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
           ),
         ],
       ),
       body: ContentFrame(
         child: HeaderBody(
           header: SurfaceCard(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(24),
-            gradient: ConexiaColors.hero,
+            margin: EdgeInsets.all(16),
+            padding: EdgeInsets.all(24),
+            gradient: ConexiaPalette.of(context).hero,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Align(
+                Align(
                   alignment: Alignment.centerLeft,
                   child: StatusPill(
                     label: 'Cuidado que aproxima',
@@ -86,12 +89,12 @@ class _FamilyState extends State<PainelResponsavelScreen> {
                     positive: true,
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Text(
                   minor ? 'Seu vínculo familiar' : 'Perfis vinculados',
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Text(
                   minor
                       ? 'O feed depende da confirmação do seu e-mail, do e-mail do responsável e do vínculo ativo.'
@@ -99,26 +102,37 @@ class _FamilyState extends State<PainelResponsavelScreen> {
                 ),
                 if (minor)
                   TextButton.icon(
-                    icon: const Icon(Icons.visibility_outlined),
-                    label: const Text('O que meu responsável vê'),
+                    icon: Icon(Icons.visibility_outlined),
+                    label: Text('O que meu responsável vê'),
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const FamilyActivityScreen(),
+                      MaterialPageRoute(builder: (_) => FamilyActivityScreen()),
+                    ),
+                  ),
+                if (minor && user.active)
+                  TextButton.icon(
+                    icon: const Icon(Icons.school_outlined),
+                    label: const Text('Quem acompanha na escola'),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => SchoolFamilyScreen(
+                          childId: user.id,
+                          childName: user.name,
+                          readOnly: true,
+                        ),
                       ),
                     ),
                   ),
                 if (!minor && user.verified) ...[
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   FilledButton.icon(
-                    icon: const Icon(Icons.person_add_alt_1),
-                    label: const Text('Criar ou vincular perfil do menor'),
+                    icon: Icon(Icons.person_add_alt_1),
+                    label: Text('Criar ou vincular perfil do menor'),
                     onPressed: () async {
                       final result = await Navigator.push<bool>(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => const ChildAccountScreen(),
-                        ),
+                        MaterialPageRoute(builder: (_) => ChildAccountScreen()),
                       );
                       if (result == true && mounted) {
                         setState(() => revision++);
@@ -130,11 +144,9 @@ class _FamilyState extends State<PainelResponsavelScreen> {
                   TextButton(
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const VerificationScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => VerificationScreen()),
                     ),
-                    child: const Text('Confirmar meu e-mail'),
+                    child: Text('Confirmar meu e-mail'),
                   ),
               ],
             ),
@@ -147,10 +159,10 @@ class _FamilyState extends State<PainelResponsavelScreen> {
                       ? Center(
                           child: s.hasError
                               ? Text(s.error.toString())
-                              : const CircularProgressIndicator(),
+                              : CircularProgressIndicator(),
                         )
                       : ListView(
-                          padding: const EdgeInsets.all(24),
+                          padding: EdgeInsets.all(24),
                           children: [
                             ListTile(
                               leading: Icon(
@@ -158,7 +170,7 @@ class _FamilyState extends State<PainelResponsavelScreen> {
                                     ? Icons.check_circle_outline
                                     : Icons.schedule,
                               ),
-                              title: const Text('Seu e-mail confirmado'),
+                              title: Text('Seu e-mail confirmado'),
                             ),
                             ListTile(
                               leading: Icon(
@@ -173,14 +185,18 @@ class _FamilyState extends State<PainelResponsavelScreen> {
                             ),
                             ListTile(
                               leading: Icon(
-                                s.data!['approved'] == true
+                                (s.data!['familyApproved'] ??
+                                            s.data!['approved']) ==
+                                        true
                                     ? Icons.check_circle_outline
                                     : Icons.schedule,
                               ),
                               title: Text(
                                 s.data!['state'] == 'paused'
                                     ? 'Acesso pausado pelo responsável'
-                                    : s.data!['approved'] == true
+                                    : (s.data!['familyApproved'] ??
+                                              s.data!['approved']) ==
+                                          true
                                     ? 'Vínculo ativo'
                                     : 'Aguardando vínculo',
                               ),
@@ -189,7 +205,7 @@ class _FamilyState extends State<PainelResponsavelScreen> {
                         ),
                 )
               : !user.verified
-              ? const EmptyState(
+              ? EmptyState(
                   message: 'Confirme seu e-mail antes de cadastrar um menor.',
                 )
               : AsyncItems(
@@ -198,7 +214,7 @@ class _FamilyState extends State<PainelResponsavelScreen> {
                   empty: 'Nenhum perfil vinculado. Comece criando o perfil do menor.',
                   builder: (_, v) => Card(
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -208,8 +224,8 @@ class _FamilyState extends State<PainelResponsavelScreen> {
                           ),
                           Text('Apelido: ${v["name"]}'),
                           TextButton.icon(
-                            icon: const Icon(Icons.people_outline),
-                            label: const Text('Autorizar contatos'),
+                            icon: Icon(Icons.people_outline),
+                            label: Text('Autorizar contatos'),
                             onPressed: () => Navigator.push(
                               context,
                               MaterialPageRoute<void>(
@@ -221,8 +237,8 @@ class _FamilyState extends State<PainelResponsavelScreen> {
                             ),
                           ),
                           TextButton.icon(
-                            icon: const Icon(Icons.insights_outlined),
-                            label: const Text('Acompanhar feed'),
+                            icon: Icon(Icons.insights_outlined),
+                            label: Text('Acompanhar feed'),
                             onPressed: () => Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -234,15 +250,54 @@ class _FamilyState extends State<PainelResponsavelScreen> {
                             ),
                           ),
                           Text(v['email'] as String),
+                          TextButton.icon(
+                            icon: const Icon(Icons.fact_check_outlined),
+                            label: const Text(
+                              'Autorizar e acompanhar revisão do cadastro',
+                            ),
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => EnrollmentReviewScreen(
+                                  childId: v['id'] as String,
+                                  childName: v['name'] as String,
+                                ),
+                              ),
+                            ),
+                          ),
+                          TextButton.icon(
+                            icon: const Icon(Icons.science_outlined),
+                            label: const Text('Autorizar experimento etário'),
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => VisionConsentScreen(
+                                  childId: v['id'] as String,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (v['verified'] == 1 && v['needsNickname'] != true)
+                            TextButton.icon(
+                              icon: const Icon(Icons.school_outlined),
+                              label: const Text('Acompanhamento escolar'),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => SchoolFamilyScreen(
+                                    childId: v['id'] as String,
+                                    childName: v['name'] as String,
+                                  ),
+                                ),
+                              ),
+                            ),
                           Text(
                             v['verified'] == 1
                                 ? 'E-mail do menor confirmado'
                                 : 'Aguardando confirmação do menor',
                           ),
                           if (v['needsNickname'] == true)
-                            const Text(
-                              'O menor escolherá o apelido ao entrar.',
-                            ),
+                            Text('O menor escolherá o apelido ao entrar.'),
                           TextButton(
                             onPressed: pending.contains(v['id'])
                                 ? null

@@ -15,6 +15,8 @@ class Account {
     this.needsNickname = false,
     this.isAdmin = false,
     this.accountStatus = 'active',
+    this.reviewRequired = false,
+    this.enrollmentState = 'not_submitted',
   });
   factory Account.fromJson(Map<String, dynamic> json) => Account(
     id: json['id'] as String,
@@ -30,17 +32,22 @@ class Account {
     needsNickname: json['needsNickname'] == true,
     isAdmin: json['isAdmin'] == true,
     accountStatus: json['accountStatus'] as String? ?? 'active',
+    reviewRequired: json['reviewRequired'] == true,
+    enrollmentState: json['enrollmentState'] as String? ?? 'not_submitted',
   );
   final String id, name, email, bio;
   final String? avatar;
   final bool needsNickname;
   final bool isAdmin;
   final String accountStatus;
+  final bool reviewRequired;
+  final String enrollmentState;
   final bool verified, approved, needsGuardian, private, messages;
   bool get active =>
       accountStatus == 'active' &&
       verified &&
       (!needsGuardian || approved) &&
+      (!reviewRequired || enrollmentState == 'approved') &&
       !needsNickname;
 }
 

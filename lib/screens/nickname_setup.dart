@@ -1,4 +1,5 @@
 import '../widgets/design_system.dart';
+import 'vision_screen.dart';
 
 import 'package:flutter/material.dart';
 
@@ -71,6 +72,16 @@ class _NicknameState extends State<NicknameSetup> {
         decoration: const InputDecoration(labelText: 'Seu apelido'),
       ),
       if (error != null) InlineNotice(message: error!, error: true),
+      TextButton.icon(
+        onPressed: busy
+            ? null
+            : () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(builder: (_) => const VisionScreen()),
+              ),
+        icon: const Icon(Icons.science_outlined),
+        label: const Text('Experimento de faixa etária (opcional)'),
+      ),
       const SizedBox(height: 16),
       BusyButton(
         onPressed: save,

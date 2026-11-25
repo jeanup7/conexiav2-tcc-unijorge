@@ -1,3 +1,5 @@
+import '../../widgets/social/profile_avatar.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -14,32 +16,184 @@ class MessagesScreen extends StatefulWidget {
 }
 
 class _MessagesScreenState extends State<MessagesScreen> {
+  bool contacts = false;
+  String query = '';
   int revision = 0;
+  final search = TextEditingController();
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<int>(
     valueListenable: AppScope.of(context).social.revision,
-    builder: (_, socialRevision, _) => Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16),
-          child: Text(
-            'Conversas disponíveis apenas entre contatos aprovados. Você pode desativar mensagens nas configurações.',
-          ),
-        ),
-        Expanded(
-          child: AsyncItems(
-            key: ValueKey('$revision-$socialRevision'),
-            load: () => AppScope.of(context).social.list('/contacts'),
-            empty: 'Nenhum contato aprovado ainda.',
-            builder: (_, row) => ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-              title: Text(row['name'] as String),
-              subtitle: Text(
-                row['approved'] == 1
-                    ? 'Contato aprovado'
-                    : 'Aguardando aprovação',
+    builder: (_, socialRevision, _) => HeaderBody(
+      header: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Conversas',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Seu espaço para trocar ideias com contatos autorizados.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: search,
+              onChanged: (v) => setState(() => query = v.trim().toLowerCase()),
+              decoration: InputDecoration(
+                labelText: 'Buscar por nome',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: query.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Limpar busca',
+                        onPressed: () {
+                          search.clear();
+                          setState(() => query = '');
+                        },
+                        icon: const Icon(Icons.close),
+                      ),
               ),
-              onTap: row['approved'] != 1
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Conversas iniciadas'),
+                  selected: !contacts,
+                  onSelected: (_) => setState(() => contacts = false),
+                ),
+                ChoiceChip(
+                  label: const Text('Nova conversa'),
+                  selected: contacts,
+                  onSelected: (_) => setState(() => contacts = true),
+                ),
+                IconButton(
+                  tooltip: 'Atualizar conversas',
+                  onPressed: () => setState(() => revision++),
+                  icon: const Icon(Icons.refresh),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      body: _ConversationList(
+        key: ValueKey('$contacts-$revision-$socialRevision'),
+        contacts: contacts,
+        query: query,
+        onReturn: () {
+          if (mounted) setState(() => revision++);
+        },
+      ),
+    ),
+  );
+}
+
+class _ConversationList extends StatefulWidget {
+  const _ConversationList({
+    super.key,
+    required this.contacts,
+    required this.query,
+    required this.onReturn,
+  });
+  final bool contacts;
+  final String query;
+  final VoidCallback onReturn;
+  @override
+  State<_ConversationList> createState() => _ConversationListState();
+}
+
+class _ConversationListState extends State<_ConversationList> {
+  Future<List<Map<String, dynamic>>>? request;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    request ??= AppScope.of(context).social
+        .list(widget.contacts ? '/contacts' : '/conversations');
+  }
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) => FutureBuilder<List<Map<String, dynamic>>>(
+    future: request,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              EmptyState(message: 'Não foi possível carregar as conversas.'),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    request = AppScope.of(context).social
+                        .list(widget.contacts ? '/contacts' : '/conversations');
+                  });
+                },
+                child: const Text('Tentar novamente'),
+              ),
+            ],
+          ),
+        );
+      }
+      if (!snapshot.hasData) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      final rows = snapshot.data!
+          .where(
+            (r) => (r['name'] as String).toLowerCase().contains(widget.query),
+          )
+          .toList();
+      if (rows.isEmpty) {
+        return SingleChildScrollView(
+          child: EmptyState(
+            message: widget.query.isNotEmpty
+                ? 'Nenhum resultado para esta busca.'
+                : widget.contacts
+                ? 'Você ainda não tem contatos. Use Pesquisa para encontrar pessoas.'
+                : 'Sua caixa está tranquila. Escolha Nova conversa para começar.',
+          ),
+        );
+      }
+      return ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        itemCount: rows.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (context, i) {
+          final row = rows[i];
+          final approved = !widget.contacts || row['approved'] == 1;
+          return Card(
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 10,
+              ),
+              leading: ProfileAvatar(
+                media: row['avatar'] as String?,
+                radius: 22,
+                label: 'Foto de ${row['name']}',
+              ),
+              title: Text(
+                row['name'] as String,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                approved ? 'Abrir conversa privada' : 'Aguardando aprovação',
+              ),
+              trailing: Icon(
+                approved ? Icons.north_east : Icons.hourglass_empty,
+              ),
+              onTap: !approved
                   ? null
                   : () async {
                       await Navigator.push(
@@ -51,13 +205,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           ),
                         ),
                       );
-                      if (mounted) setState(() => revision++);
+                      if (mounted) widget.onReturn();
                     },
             ),
-          ),
-        ),
-      ],
-    ),
+          );
+        },
+      );
+    },
   );
 }
 
@@ -283,30 +437,55 @@ class _ChatScreenState extends State<ChatScreen> {
                       final m = messages[index - 1];
                       final mine =
                           m['sender'] == AppScope.of(context).account?.id;
-                      final bubble = Align(
-                        alignment: mine
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 320),
-                          child: Card(
-                            color: mine
-                                ? Theme.of(context).colorScheme.primaryContainer
-                                : Colors.white,
-                            child: Padding(
-                              padding: const EdgeInsets.all(14),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(m['text'] as String),
-                                  if (mine)
-                                    Text(
-                                      m['read'] == 1 ? 'Lida' : 'Enviada',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall,
-                                    ),
-                                ],
+                      final bubble = GestureDetector(
+                        onLongPress: () => showModalBottomSheet<void>(
+                          context: context,
+                          useSafeArea: true,
+                          showDragHandle: true,
+                          builder: (sheetContext) => ListTile(
+                            leading: const Icon(Icons.flag_outlined),
+                            title: const Text('Denunciar esta mensagem'),
+                            onTap: () {
+                              Navigator.pop(sheetContext);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      DenunciaScreen(target: m['id'] as String),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        child: Align(
+                          alignment: mine
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 320),
+                            child: Card(
+                              color: mine
+                                  ? Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer
+                                  : Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainer,
+                              child: Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(m['text'] as String),
+                                    if (mine)
+                                      Text(
+                                        m['read'] == 1 ? 'Lida' : 'Enviada',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall,
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),

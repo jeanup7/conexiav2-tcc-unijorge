@@ -15,48 +15,56 @@ class FeedSkeleton extends StatelessWidget {
     child: ExcludeSemantics(
       child: Skeletonizer.zone(
         effect: MediaQuery.disableAnimationsOf(context)
-            ? const SolidColorEffect(color: ConexiaColors.line)
-            : const ShimmerEffect(
-                baseColor: ConexiaColors.line,
-                highlightColor: ConexiaColors.canvas,
+            ? SolidColorEffect(color: ConexiaPalette.of(context).line)
+            : ShimmerEffect(
+                baseColor: ConexiaPalette.of(context).line,
+                highlightColor: ConexiaPalette.of(context).background,
                 duration: Duration(milliseconds: 1400),
               ),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
+          padding: EdgeInsets.fromLTRB(16, 24, 16, 20),
           children: [
-            const Bone(width: 180, height: 32),
-            const SizedBox(height: 24),
+            Bone(width: 180, height: 32),
+            SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(4, (_) => const Bone.circle(size: 64)),
+              children: List.generate(
+                2,
+                (_) => Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.all(6),
+                    child: Bone(height: 100),
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(height: 28),
+            SizedBox(height: 28),
             ...List.generate(
               2,
               (_) => SurfaceCard(
-                margin: const EdgeInsets.only(bottom: 24),
-                padding: const EdgeInsets.all(16),
+                margin: EdgeInsets.only(bottom: 24),
+                padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
                         Bone.circle(size: 40),
                         SizedBox(width: 12),
                         Bone(width: 120, height: 16),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    const AspectRatio(
-                      aspectRatio: 1,
+                    SizedBox(height: 16),
+                    AspectRatio(
+                      aspectRatio: 1.6,
                       child: Bone(
                         borderRadius: BorderRadius.all(Radius.circular(24)),
                       ),
                     ),
-                    const SizedBox(height: 14),
-                    const Bone(width: 110, height: 18),
-                    const SizedBox(height: 10),
-                    const Bone(height: 14),
+                    SizedBox(height: 14),
+                    Bone(width: 110, height: 18),
+                    SizedBox(height: 10),
+                    Bone(height: 14),
                   ],
                 ),
               ),

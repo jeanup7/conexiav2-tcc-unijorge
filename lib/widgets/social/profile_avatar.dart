@@ -47,7 +47,7 @@ class _AvatarState extends State<ProfileAvatar> {
       child: SizedBox.square(
         dimension: widget.radius * 2,
         child: ColoredBox(
-          color: const Color(0xFFEBEDFC),
+          color: Theme.of(context).colorScheme.primaryContainer,
           child: image == null
               ? Icon(Icons.person_outline, size: widget.radius)
               : Image(

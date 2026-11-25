@@ -1,0 +1,5 @@
+subject,split,presentation,image,age_band,consent
+participant_001,validation,live,images/p001-live.jpg,20-29,yes
+participant_001,validation,print,images/p001-print.jpg,20-29,yes
+participant_002,test,live,images/p002-live.jpg,30-39,yes
+participant_002,test,screen,images/p002-screen.jpg,30-39,yes

@@ -1,3 +1,4 @@
+import '../widgets/social/profile_heading.dart';
 import '../widgets/design_system.dart';
 import '../theme/design_tokens.dart';
 
@@ -7,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../widgets/common.dart';
-import '../widgets/social/profile_avatar.dart';
 import 'social/feed_screen.dart';
 
 class PerfilInfantilScreen extends StatefulWidget {
@@ -19,6 +19,8 @@ class PerfilInfantilScreen extends StatefulWidget {
 
 class _ProfileState extends State<PerfilInfantilScreen> {
   bool busy = false;
+  int? count;
+  bool hasMore = false;
   Future<void> photo({bool remove = false}) async {
     if (busy) return;
     setState(() => busy = true);
@@ -39,7 +41,7 @@ class _ProfileState extends State<PerfilInfantilScreen> {
         if (!mounted) return;
         state.api.checkSession(version);
         if (bytes.length > 5 * 1024 * 1024) {
-          throw const FormatException('Escolha uma foto de até 5 MB.');
+          throw FormatException('Escolha uma foto de até 5 MB.');
         }
         final mime = bytes.length >= 8 && bytes[0] == 137 && bytes[1] == 80
             ? 'image/png'
@@ -52,7 +54,7 @@ class _ProfileState extends State<PerfilInfantilScreen> {
                       'WEBP'
             ? 'image/webp'
             : null;
-        if (mime == null) throw const FormatException('Use JPEG, PNG ou WebP.');
+        if (mime == null) throw FormatException('Use JPEG, PNG ou WebP.');
         final media = await state.api.request('POST', '/media', {
           'mime': mime,
           'data': base64Encode(bytes),
@@ -81,37 +83,30 @@ class _ProfileState extends State<PerfilInfantilScreen> {
   Widget build(BuildContext context) {
     final user = AppScope.of(context).account;
     if (user == null) {
-      return const EmptyState(message: 'Entre para ver seu perfil.');
+      return EmptyState(message: 'Entre para ver seu perfil.');
     }
     final body = HeaderBody(
       header: SurfaceCard(
-        margin: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        padding: const EdgeInsets.all(24),
-        gradient: ConexiaColors.hero,
+        margin: EdgeInsets.fromLTRB(16, 16, 16, 24),
+        padding: EdgeInsets.all(24),
+        gradient: ConexiaPalette.of(context).hero,
         child: Column(
           children: [
-            ProfileAvatar(
+            ProfileHeading(
+              name: user.name,
+              bio: user.bio,
+              private: user.private,
               media: user.avatar,
-              radius: 38,
-              label: 'Foto de ${user.name}',
+              count: count,
+              hasMore: hasMore,
             ),
-            const SizedBox(height: 12),
-            Text(user.name, style: Theme.of(context).textTheme.headlineSmall),
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: StatusPill(
-                label: user.private ? 'Perfil privado' : 'Perfil público',
-                positive: true,
-              ),
-            ),
-            if (user.bio.isNotEmpty)
-              Padding(padding: const EdgeInsets.all(12), child: Text(user.bio)),
+            const SizedBox(height: 16),
             Wrap(
               alignment: WrapAlignment.center,
               children: [
                 TextButton.icon(
                   onPressed: busy ? null : () => photo(),
-                  icon: const Icon(Icons.add_a_photo_outlined),
+                  icon: Icon(Icons.add_a_photo_outlined),
                   label: Text(
                     busy
                         ? 'Salvando…'
@@ -123,24 +118,34 @@ class _ProfileState extends State<PerfilInfantilScreen> {
                 if (user.avatar != null)
                   TextButton(
                     onPressed: busy ? null : () => photo(remove: true),
-                    child: const Text('Remover foto'),
+                    child: Text('Remover foto'),
                   ),
               ],
             ),
             TextButton.icon(
               onPressed: () => Navigator.pushNamed(context, '/seguranca'),
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Editar apelido e preferências'),
+              icon: Icon(Icons.edit_outlined),
+              label: Text('Editar apelido e preferências'),
             ),
           ],
         ),
       ),
-      body: const FeedScreen(ownOnly: true),
+      body: FeedScreen(
+        ownOnly: true,
+        onSummary: (value, more) {
+          if (mounted) {
+            setState(() {
+              count = value;
+              hasMore = more;
+            });
+          }
+        },
+      ),
     );
     return widget.embedded
         ? body
         : Scaffold(
-            appBar: AppBar(title: const Text('Meu perfil')),
+            appBar: AppBar(title: Text('Meu perfil')),
             body: ContentFrame(child: body),
           );
   }

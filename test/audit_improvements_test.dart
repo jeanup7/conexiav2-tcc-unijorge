@@ -47,7 +47,6 @@ Map<String, dynamic> message(String id, {bool incoming = false}) => {
   'created': id == 'older' ? 1 : 2,
   'read': 0,
 };
-
 void main() {
   test(
     'feed keeps opaque cursor and accepts older numeric responses',
@@ -65,7 +64,6 @@ void main() {
       expect(result.cursor, '123');
     },
   );
-
   testWidgets('real tabs preserve feed and like does not reload it', (
     tester,
   ) async {
@@ -102,23 +100,26 @@ void main() {
     addTearDown(state.dispose);
     await tester.pumpWidget(app(state, const InicioScreen()));
     await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Pesquisa'));
     await tester.tap(find.text('Pesquisa'));
     await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Feed'));
     await tester.tap(find.text('Feed'));
     await tester.pumpAndSettle();
     expect(feeds, 1);
-    await tester.ensureVisible(find.byTooltip('Curtir'));
+    await tester.ensureVisible(find.byTooltip('Dar impulso'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Curtir'));
+    await tester.tap(find.byTooltip('Dar impulso'));
     await tester.pumpAndSettle();
     expect(likes, 1);
     expect(feeds, 1);
     expect(stories, 1);
-    expect(find.text('1 curtidas'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
-
   testWidgets('chat loads older history and can close during send', (
     tester,
   ) async {
@@ -154,7 +155,6 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
   });
-
   testWidgets('chat acknowledges only displayed incoming messages', (
     tester,
   ) async {
@@ -186,7 +186,6 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     expect(tester.takeException(), isNull);
   });
-
   test(
     'Firebase logout clears local state without revoking other devices',
     () async {

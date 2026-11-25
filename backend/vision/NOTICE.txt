@@ -1,0 +1,74 @@
+CONEXIA - PROTOTIPO ACADEMICO DE FAIXA ETARIA E PAD
+
+O que foi desenvolvido no Conexia:
+- sessao autenticada e temporaria; autorizacao especifica do responsavel;
+- interface de captura guiada e descarte dos temporarios da camera;
+- qualidade/enquadramento, integracao de inferencia e heuristica de movimento;
+- controle de repeticao, revogacao, isolamento e expurgo de metadados;
+- comparador offline, metricas e testes. Nenhum modelo foi treinado por nos.
+
+Modelos externos (ONNX, inferencia local CPU):
+1. YuNet face_detection_yunet_2023mar, OpenCV Zoo / Shiqi Yu. MIT.
+   https://github.com/opencv/opencv_zoo/tree/48b10fa505aeb51fbd127fc60a5c660040e823b7/models/face_detection_yunet
+2. MiniFASNetV2, Minivision (2020), via exportacao ONNX de yakhyo.
+   Codigo/preprocessamento de referencia Apache-2.0. Conexia adapta o crop.
+   https://github.com/minivision-ai/Silent-Face-Anti-Spoofing
+   https://github.com/yakhyo/face-anti-spoofing/tree/01a38903f4f2680bb59d32a994a6c7b5ae56f49b
+3. dima806/fairface_age_image_detection, ViT ajustado sobre FairFace.
+   O autor declara Apache-2.0. ONNX quantizado da onnx-community (conversao
+   sem licenca separada declarada na ficha); preservar atribuicao e revisar
+   os direitos dos pesos/dados antes de qualquer redistribuicao/comercializacao.
+   https://huggingface.co/dima806/fairface_age_image_detection
+   https://huggingface.co/onnx-community/fairface_age_image_detection-ONNX/tree/fd04cddf04982f6acc1ac76fb1a31b44c9285596
+
+Os pesos sao baixados separadamente, com SHA-256 esperado fixado no instalador;
+nao integram o Git. As licencas completas originais devem acompanhar eventual
+redistribuicao. Este prototipo nao concede direitos adicionais sobre os dados.
+
+LIMITES:
+- Nao reconhece identidade, parentesco ou continuidade de identidade entre frames.
+- A classe 10-19 atravessa a maioridade: sempre inconclusiva para esse limite.
+- Modelo etario tem desempenho limitado na ficha original, sem validacao local
+  em menores. Scores nao sao probabilidades calibradas de idade ou presenca.
+- PAD passivo e a heuristica de movimento nao garantem prova de vida, resistencia
+  a camera virtual, deepfake, video injetado, mascara ou troca de pessoa.
+- Resultados jamais alteram verified/approved, nascimento, papel ou acesso ao feed.
+- Capturas ficam em memoria no servidor; nao vao a media, SQLite, Storage ou logs.
+  Em dispositivos moveis, o temporario criado pelo plugin e excluido apos leitura.
+  Resultados deixam de ser consultaveis em 24h. Limpeza horaria remove os registros
+  em ate 25h; revogacao os remove imediatamente. Nao e apagamento forense de WAL
+  ou backups; o piloto precisa de politica propria para esses meios.
+- O cadastro normal continua independente. Sessao exige e-mails confirmados e
+  vinculo ativo; para menor, tambem autorizacao especifica do responsavel atual.
+- Antes de um piloto com menores, definir base legal, responsabilidades,
+  consentimento/assentimento quando cabiveis, alternativas de acesso e protocolo
+  de pesquisa. Comecar a avaliacao com adultos voluntarios e autorizados.
+
+CONFIGURACAO LOCAL (PowerShell, pasta do projeto):
+python -m venv backend/.venv-vision
+backend/.venv-vision/Scripts/python.exe -m pip install -r backend/requirements-vision.txt
+backend/.venv-vision/Scripts/python.exe backend/install_vision_models.py --directory "$env:LOCALAPPDATA/Conexia/vision-models"
+$env:CONEXIA_VISION_MODELS="$env:LOCALAPPDATA/Conexia/vision-models"
+Ative o ambiente virtual antes de executar backend/start_firebase.cmd, para
+que o servidor use essas dependencias. Nenhum bucket/faturamento e necessario.
+No Windows, backend/start_vision.cmd ja seleciona o ambiente e os modelos
+padrao. Encerre a API anterior antes de iniciar a API experimental.
+No Chrome use localhost ou HTTPS. A permissao de camera e solicitada somente
+ao iniciar uma captura voluntaria. Audio e selecao de galeria nao sao usados.
+
+ACESSO:
+- Privacidade e seguranca > Laboratorio de verificacao etaria.
+- Escolha do apelido > Experimento de faixa etaria (opcional).
+- Minha familia > Autorizar experimento etario, no perfil do menor.
+
+AVALIACAO COMPARATIVA:
+Copie dataset.example.csv para uma pasta privada, substitua os exemplos por
+capturas autorizadas e mantenha uma pessoa em apenas um split. Nao adicione
+essas imagens ao Git. Registre a referencia etaria de forma consentida.
+python backend/evaluate_vision.py --manifest CAMINHO/dataset.csv --models CAMINHO_MODELOS --output CAMINHO_PRIVADO/resultado.json
+O comparador mede classes etarias, APCER/BPCER condicionados a amostras
+processaveis, falhas de processamento, cobertura e latencia. Compara modelo
+etario isolado (sem defesa PAD) ao filtro combinado. Nao valida o desafio de
+movimento. Conservar denominadores e nao usar seus testes para calibrar limiares.
+Os limiares 0.8 (PAD) e 0.7 (idade) sao experimentais, nao calibrados.
+Teste unitario com imagens sinteticas valida codigo, NAO acuracia em pessoas.

@@ -1,3 +1,5 @@
+import 'theme/appearance.dart';
+
 import 'dart:async';
 
 import 'repositories/child_registration.dart';
@@ -26,6 +28,7 @@ import 'screens/denuncia_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Appearance.instance.load();
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks([
       'Lato',
@@ -66,8 +69,9 @@ class _BootstrapState extends State<_Bootstrap> {
                         ),
                         const SizedBox(height: 16),
                         FilledButton(
-                          onPressed: () =>
-                              setState(() => initialization = initialize()),
+                          onPressed: () => setState(() {
+                            initialization = initialize();
+                          }),
                           child: const Text('Tentar novamente'),
                         ),
                       ],
@@ -158,38 +162,43 @@ class _ConexaoSeguraAppState extends State<ConexaoSeguraApp>
   @override
   Widget build(BuildContext context) => AppScope(
     state: state,
-    child: MaterialApp(
-      navigatorKey: navigatorKey,
-      title: 'Conexia Segura',
-      debugShowCheckedModeBanner: false,
-      theme: conexiaTheme(),
-      locale: const Locale('pt', 'BR'),
-      supportedLocales: const [Locale('pt', 'BR')],
-      localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      home: const SessionGate(),
-      onGenerateRoute: (settings) {
-        final screens = <String, Widget>{
-          '/login': const LoginScreen(),
-          '/cadastro': const CadastroScreen(),
-          '/inicio': const InicioScreen(),
-          '/seguranca': const SegurancaScreen(),
-          '/perfil-infantil': const PerfilInfantilScreen(),
-          '/painel-responsavel': const PainelResponsavelScreen(),
-          '/denuncia': const DenunciaScreen(),
-        };
-        return MaterialPageRoute<void>(
-          settings: settings,
-          builder: (context) {
-            final current = AppScope.of(context).account;
-            if (settings.name != '/login' &&
-                settings.name != '/cadastro' &&
-                current == null) {
-              return const LoginScreen();
-            }
-            return screens[settings.name] ?? const SessionGate();
-          },
-        );
-      },
+    child: ValueListenableBuilder<bool>(
+      valueListenable: Appearance.instance,
+      builder: (_, dark, _) => MaterialApp(
+        navigatorKey: navigatorKey,
+        title: 'Conexia Segura',
+        darkTheme: conexiaTheme(brightness: Brightness.dark),
+        themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+        debugShowCheckedModeBanner: false,
+        theme: conexiaTheme(),
+        locale: const Locale('pt', 'BR'),
+        supportedLocales: const [Locale('pt', 'BR')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: const SessionGate(),
+        onGenerateRoute: (settings) {
+          final screens = <String, Widget>{
+            '/login': const LoginScreen(),
+            '/cadastro': const CadastroScreen(),
+            '/inicio': const InicioScreen(),
+            '/seguranca': const SegurancaScreen(),
+            '/perfil-infantil': const PerfilInfantilScreen(),
+            '/painel-responsavel': const PainelResponsavelScreen(),
+            '/denuncia': const DenunciaScreen(),
+          };
+          return MaterialPageRoute<void>(
+            settings: settings,
+            builder: (context) {
+              final current = AppScope.of(context).account;
+              if (settings.name != '/login' &&
+                  settings.name != '/cadastro' &&
+                  current == null) {
+                return const LoginScreen();
+              }
+              return screens[settings.name] ?? const SessionGate();
+            },
+          );
+        },
+      ),
     ),
   );
 }

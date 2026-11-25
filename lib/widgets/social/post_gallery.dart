@@ -50,8 +50,10 @@ class PostGallery extends StatefulWidget {
     super.key,
     required this.photos,
     required this.onDoubleTap,
+    this.aspectRatio = 1.5,
   });
   final List<PostPhoto> photos;
+  final double aspectRatio;
   final VoidCallback onDoubleTap;
   @override
   State<PostGallery> createState() => _PostGalleryState();
@@ -95,7 +97,7 @@ class _PostGalleryState extends State<PostGallery> {
   Widget build(BuildContext context) => Column(
     children: [
       AspectRatio(
-        aspectRatio: 1,
+        aspectRatio: widget.aspectRatio,
         child: Stack(
           children: [
             Positioned.fill(
@@ -177,8 +179,8 @@ class _PostGalleryState extends State<PostGallery> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: i == selected
-                      ? const Color(0xFF6265ED)
-                      : const Color(0xFFD5D7E3),
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.outlineVariant,
                 ),
               ),
             ),

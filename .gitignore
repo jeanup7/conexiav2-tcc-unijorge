@@ -58,3 +58,13 @@ app.*.map.json
 **/*firebase-adminsdk*.json
 **/*service-account*.json
 backend/.venv/
+
+# Private integration-test defines and local coverage artifacts
+**/*qa-defines*.json
+.coverage*
+backend/vision/models/
+backend/.venv-vision/
+*.onnx
+*.download
+*.review.key
+review.key

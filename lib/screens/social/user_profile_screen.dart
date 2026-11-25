@@ -1,6 +1,8 @@
+import '../../models/models.dart';
+import 'composer_screen.dart';
+import '../../widgets/social/profile_heading.dart';
 import '../../widgets/design_system.dart';
 import '../../theme/design_tokens.dart';
-import '../../widgets/social/profile_avatar.dart';
 
 import 'package:flutter/material.dart';
 
@@ -25,6 +27,8 @@ class UserProfileScreen extends StatefulWidget {
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
   Future<Map<String, dynamic>>? profile;
+  int? count;
+  bool hasMore = false;
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -38,6 +42,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   void didUpdateWidget(covariant UserProfileScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.userId != widget.userId || oldWidget.store != widget.store) {
+      count = null;
+      hasMore = false;
       profile = widget.store == null
           ? AppScope.of(context).api.request(
               'GET',
@@ -61,50 +67,54 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     return ContentFrame(
       child: HeaderBody(
         header: SurfaceCard(
-          margin: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          padding: const EdgeInsets.all(24),
-          gradient: ConexiaColors.hero,
-          child: Column(
-            children: [
-              ProfileAvatar(
-                media: media,
-                image: avatar,
-                radius: 42,
-                label: 'Foto de $name',
-              ),
-              const SizedBox(height: 12),
-              Text(name, style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 6),
-              StatusPill(
-                label: private ? 'Perfil privado' : 'Perfil público',
-                positive: true,
-              ),
-              if (bio.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(bio, textAlign: TextAlign.center),
-                ),
-              if (widget.store != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    '${local.length} publicações • perfil de demonstração',
-                  ),
-                ),
-            ],
+          margin: EdgeInsets.fromLTRB(16, 16, 16, 24),
+          padding: EdgeInsets.all(24),
+          gradient: ConexiaPalette.of(context).hero,
+          child: ProfileHeading(
+            name: name,
+            bio: bio,
+            private: private,
+            media: media,
+            image: avatar,
+            count: widget.store != null ? local.length : count,
+            hasMore: hasMore,
           ),
         ),
         body: widget.store == null
-            ? FeedScreen(key: ValueKey(widget.userId), authorId: widget.userId)
+            ? FeedScreen(
+                key: ValueKey(widget.userId),
+                authorId: widget.userId,
+                onSummary: (value, more) {
+                  if (mounted) {
+                    setState(() {
+                      count = value;
+                      hasMore = more;
+                    });
+                  }
+                },
+              )
             : local.isEmpty
-            ? const EmptyState(
-                message:
-                    'Ainda não há publicações. Use a aba Criar para começar.',
+            ? SingleChildScrollView(
+                child: widget.userId == 'preview-self'
+                    ? FirstPublication(
+                        onCreate: () async {
+                          final post = await Navigator.push<Publication>(
+                            context,
+                            MaterialPageRoute<Publication>(
+                              builder: (_) =>
+                                  const ComposerScreen(preview: true),
+                            ),
+                          );
+                          if (mounted && post != null) widget.store!.add(post);
+                        },
+                      )
+                    : const EmptyState(message: 'Ainda não há publicações.'),
               )
             : GridView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 20),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.4,
                   crossAxisSpacing: 8,
                   mainAxisSpacing: 8,
                 ),
@@ -132,8 +142,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         Positioned.fill(
                           child: post.photos.isEmpty
                               ? Container(
-                                  color: const Color(0xFFEBEDFC),
-                                  padding: const EdgeInsets.all(8),
+                                  color: ConexiaPalette.of(context).tinted,
+                                  padding: EdgeInsets.all(8),
                                   child: Center(
                                     child: Text(
                                       post.text,
@@ -145,7 +155,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               : PostPhotoView(photo: post.photos.first),
                         ),
                         if (post.photos.length > 1)
-                          const Positioned(
+                          Positioned(
                             right: 6,
                             top: 6,
                             child: Icon(
@@ -189,7 +199,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             return Center(child: EmptyState(message: s.error.toString()));
           }
           if (s.connectionState != ConnectionState.done || !s.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           }
           return content(
             s.data!['name'] as String,
@@ -203,7 +213,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     return widget.embedded
         ? body
         : Scaffold(
-            appBar: AppBar(title: const Text('Perfil')),
+            appBar: AppBar(title: Text('Perfil')),
             body: body,
           );
   }

@@ -15,6 +15,23 @@ abstract class ChildRegistration {
 }
 
 class FirebaseChildRegistration implements ChildRegistration {
+  FirebaseChildRegistration({
+    this.options,
+    this.emulatorHost,
+    this.emulatorPort = 9099,
+  }) {
+    if (emulatorHost != null &&
+        (kReleaseMode ||
+            options?.projectId.startsWith('demo-') != true ||
+            !{'localhost', '127.0.0.1', '10.0.2.2'}.contains(emulatorHost))) {
+      throw ArgumentError(
+        'O emulador de autenticação exige projeto demo e build de teste local.',
+      );
+    }
+  }
+  final FirebaseOptions? options;
+  final String? emulatorHost;
+  final int emulatorPort;
   @override
   Future<bool> create(
     String email,
@@ -23,11 +40,18 @@ class FirebaseChildRegistration implements ChildRegistration {
   ) async {
     final app = await Firebase.initializeApp(
       name: 'child-${DateTime.now().microsecondsSinceEpoch}',
-      options: DefaultFirebaseOptions.currentPlatform,
+      options: options ?? DefaultFirebaseOptions.currentPlatform,
     );
     final auth = FirebaseAuth.instanceFor(app: app);
     final gateway = FirebaseAuthGateway(auth);
     try {
+      if (emulatorHost != null) {
+        await auth.useAuthEmulator(
+          emulatorHost!,
+          emulatorPort,
+          automaticHostMapping: false,
+        );
+      }
       if (kIsWeb) await auth.setPersistence(Persistence.NONE);
       try {
         await auth.createUserWithEmailAndPassword(

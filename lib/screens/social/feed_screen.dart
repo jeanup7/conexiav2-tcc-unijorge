@@ -1,3 +1,4 @@
+import '../../widgets/social/profile_heading.dart';
 import '../../widgets/design_system.dart';
 import '../../theme/design_tokens.dart';
 import '../family_activity_screen.dart';
@@ -27,11 +28,13 @@ class FeedScreen extends StatefulWidget {
     this.preview = false,
     this.previewStore,
     this.authorId,
+    this.onSummary,
   });
   final bool ownOnly;
   final bool preview;
   final PreviewStore? previewStore;
   final String? authorId;
+  final void Function(int count, bool hasMore)? onSummary;
   @override
   State<FeedScreen> createState() => _FeedScreenState();
 }
@@ -134,7 +137,7 @@ class _FeedScreenState extends State<FeedScreen> {
                 assetImage: p.assetImage,
                 expires:
                     DateTime.now()
-                        .add(const Duration(hours: 24))
+                        .add(Duration(hours: 24))
                         .millisecondsSinceEpoch /
                     1000,
               ),
@@ -174,7 +177,7 @@ class _FeedScreenState extends State<FeedScreen> {
         } catch (_) {
           state.api.checkSession(version);
           loadedStories = [];
-          storyError = 'Não foi possível atualizar os stories.';
+          storyError = 'Não foi possível atualizar os recortes.';
         }
       }
       if (mounted && generation == requestGeneration) {
@@ -187,6 +190,7 @@ class _FeedScreenState extends State<FeedScreen> {
           cursor = result.cursor;
           if (loadedStories != null) stories = loadedStories;
         });
+        widget.onSummary?.call(posts.length, cursor != null);
       }
     } catch (e) {
       if (mounted && generation == requestGeneration) {
@@ -324,11 +328,11 @@ class _FeedScreenState extends State<FeedScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar'),
+                child: Text('Cancelar'),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Confirmar'),
+                child: Text('Confirmar'),
               ),
             ],
           ),
@@ -377,24 +381,21 @@ class _FeedScreenState extends State<FeedScreen> {
   Widget build(BuildContext context) {
     final user = AppScope.of(context).account;
     if (user == null && !widget.preview) {
-      return const EmptyState(message: 'Sessão encerrada. Entre novamente.');
+      return EmptyState(message: 'Sessão encerrada. Entre novamente.');
     }
     final uid = widget.preview ? 'preview-self' : user!.id;
     final author = widget.authorId ?? (widget.ownOnly ? uid : null);
     final visible = author == null
         ? posts
         : posts.where((p) => p.userId == author).toList();
-    if (busy) return const FeedSkeleton();
+    if (busy) return FeedSkeleton();
     if (error != null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             EmptyState(message: error!, icon: Icons.cloud_off),
-            FilledButton(
-              onPressed: load,
-              child: const Text('Tentar novamente'),
-            ),
+            FilledButton(onPressed: load, child: Text('Tentar novamente')),
           ],
         ),
       );
@@ -403,30 +404,30 @@ class _FeedScreenState extends State<FeedScreen> {
       onRefresh: load,
       child: ListView(
         controller: scroll,
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 32),
+        physics: AlwaysScrollableScrollPhysics(),
         children: [
           if (!widget.ownOnly && widget.authorId == null) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
+              padding: EdgeInsets.fromLTRB(6, 8, 6, 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'DESCOBRIR & CONECTAR',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: ConexiaColors.brand,
+                      color: ConexiaPalette.of(context).primary,
                       letterSpacing: 1.4,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Expanded(
                         child: Text(
-                          'Para você',
+                          'Entre ideias.',
                           style: Theme.of(context).textTheme.headlineMedium
                               ?.copyWith(
                                 fontWeight: FontWeight.w900,
@@ -434,8 +435,8 @@ class _FeedScreenState extends State<FeedScreen> {
                               ),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      const Flexible(
+                      SizedBox(width: 10),
+                      Flexible(
                         child: StatusPill(
                           label: 'Conexões seguras',
                           positive: true,
@@ -443,9 +444,9 @@ class _FeedScreenState extends State<FeedScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   Text(
-                    'Ideias que inspiram. Pessoas que aproximam.',
+                    'Um caderno vivo de descobertas e encontros.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
@@ -454,33 +455,31 @@ class _FeedScreenState extends State<FeedScreen> {
             if (!widget.preview && user!.needsGuardian)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.family_restroom_outlined),
-                title: const Text(
+                leading: Icon(Icons.family_restroom_outlined),
+                title: Text(
                   'Acompanhamento familiar',
                   style: TextStyle(fontSize: 14),
                 ),
-                subtitle: const Text('Veja o que seu responsável acompanha.'),
+                subtitle: Text('Veja o que seu responsável acompanha.'),
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const FamilyActivityScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => FamilyActivityScreen()),
                 ),
               ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             if (storyError != null)
               TextButton.icon(
                 onPressed: load,
-                icon: const Icon(Icons.refresh),
+                icon: Icon(Icons.refresh),
                 label: Text(storyError!),
               ),
             SizedBox(
-              height: 96 + MediaQuery.textScalerOf(context).scale(12) * 1.6,
+              height: 64 + MediaQuery.textScalerOf(context).scale(18) * 4,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children: [
                   StoryAvatar(
-                    label: 'Seu story',
+                    label: 'Seu recorte',
                     add: true,
                     ring: false,
                     onTap: () => create(true),
@@ -488,6 +487,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   ...stories.map(
                     (s) => StoryAvatar(
                       label: s.author,
+                      photo: s.photos.firstOrNull,
                       image: s.assetImage == null
                           ? null
                           : AssetImage(s.assetImage!),
@@ -506,12 +506,12 @@ class _FeedScreenState extends State<FeedScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             PressFeedback(
               child: SurfaceCard(
-                margin: const EdgeInsets.only(bottom: 24),
+                margin: EdgeInsets.only(bottom: 24),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
+                  contentPadding: EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
                   ),
@@ -519,16 +519,16 @@ class _FeedScreenState extends State<FeedScreen> {
                     width: 42,
                     height: 42,
                     decoration: BoxDecoration(
-                      color: ConexiaColors.lavender,
+                      color: ConexiaPalette.of(context).tinted,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.pencil,
                       size: 20,
-                      color: ConexiaColors.brand,
+                      color: ConexiaPalette.of(context).primary,
                     ),
                   ),
-                  title: const Text(
+                  title: Text(
                     'Compartilhe uma ideia…',
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                   ),
@@ -536,9 +536,9 @@ class _FeedScreenState extends State<FeedScreen> {
                     'Uma descoberta pode virar uma boa conversa.',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  trailing: const Icon(
+                  trailing: Icon(
                     LucideIcons.imagePlus,
-                    color: ConexiaColors.brand,
+                    color: ConexiaPalette.of(context).primary,
                     size: 23,
                   ),
                   onTap: () => create(false),
@@ -547,9 +547,10 @@ class _FeedScreenState extends State<FeedScreen> {
             ),
           ],
           if (visible.isEmpty)
-            const EmptyState(
-              message: 'Ainda não há publicações visíveis. Crie a primeira ou conecte-se a um contato aprovado.',
-            ),
+            if (widget.ownOnly || widget.authorId == uid)
+              FirstPublication(onCreate: () => create(false))
+            else
+              const EmptyState(message: 'Ainda não há publicações visíveis.'),
           ...visible.map((p) {
             final card = SocialPostCard(
               key: ValueKey(p.id),
@@ -600,14 +601,14 @@ class _FeedScreenState extends State<FeedScreen> {
               onShare: () => showDialog<void>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Compartilhar referência'),
+                  title: Text('Compartilhar referência'),
                   content: SelectableText(
                     '${p.id}\n\nA referência não concede acesso a uma publicação privada.',
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Fechar'),
+                      child: Text('Fechar'),
                     ),
                   ],
                 ),
@@ -654,11 +655,13 @@ class StoryViewer extends StatefulWidget {
 }
 
 class _StoryViewerState extends State<StoryViewer> {
-  late PageController controller;
+  late final PageController controller;
+  late int selected;
   @override
   void initState() {
     super.initState();
-    controller = PageController(initialPage: widget.initial);
+    selected = widget.initial;
+    controller = PageController(initialPage: selected);
   }
 
   @override
@@ -667,144 +670,208 @@ class _StoryViewerState extends State<StoryViewer> {
     super.dispose();
   }
 
+  void move(int index) {
+    if (index < 0 || index >= widget.stories.length) return;
+    controller.animateToPage(
+      index,
+      duration: ConexiaMotion.duration(context),
+      curve: Curves.easeOut,
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFF151722),
-    appBar: AppBar(
-      backgroundColor: const Color(0xFF151722),
-      foregroundColor: Colors.white,
-      title: const Text(
-        'Stories',
-        style: TextStyle(fontWeight: FontWeight.w700),
-      ),
-    ),
-    body: ContentFrame(
-      width: 620,
-      child: PageView(
-        controller: controller,
-        children: widget.stories
-            .map(
-              (p) => SafeArea(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 18,
-                              backgroundImage: p.assetImage == null
-                                  ? null
-                                  : AssetImage(p.assetImage!),
-                              child: p.assetImage == null
-                                  ? const Icon(Icons.person_outline)
-                                  : null,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                p.author,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            const Text(
-                              '24 h',
-                              style: TextStyle(
-                                color: Colors.white60,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+    backgroundColor: const Color(0xFF101713),
+    body: SafeArea(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Row(
+              children: [
+                for (var i = 0; i < widget.stories.length; i++)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Semantics(
+                        label: 'Recorte ${i + 1} de ${widget.stories.length}',
+                        selected: i == selected,
+                        child: LinearProgressIndicator(
+                          value: i <= selected ? 1 : 0,
+                          minHeight: 2,
+                          borderRadius: BorderRadius.circular(2),
+                          backgroundColor: Colors.white24,
+                          color: Colors.white,
                         ),
                       ),
-                      SizedBox(
-                        height: MediaQuery.sizeOf(context).height * .5,
-                        child:
-                            p.expires != null &&
-                                p.expires! * 1000 <=
-                                    DateTime.now().millisecondsSinceEpoch
-                            ? const EmptyState(message: 'Este story expirou.')
-                            : p.photos.isNotEmpty
-                            ? PostPhotoView(
-                                photo: p.photos.first,
-                                fit: BoxFit.contain,
-                              )
-                            : SingleChildScrollView(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(32),
-                                  child: Text(
-                                    p.text,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            if (p.photos.isNotEmpty)
-                              Text(
-                                p.text,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  height: 1.4,
-                                ),
-                              ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                const Expanded(
-                                  child: Text(
-                                    'Deslize para ver o próximo',
-                                    style: TextStyle(
-                                      color: Colors.white60,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  tooltip: 'Denunciar story',
-                                  color: Colors.white,
-                                  onPressed: () {
-                                    if (widget.preview) {
-                                      showFeedback(
-                                        context,
-                                        'Demonstração: nenhuma denúncia foi enviada.',
-                                      );
-                                    } else {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute<void>(
-                                          builder: (_) =>
-                                              DenunciaScreen(target: p.id),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                  icon: const Icon(Icons.flag_outlined),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              IconButton(
+                tooltip: 'Fechar recortes',
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: Colors.white),
+              ),
+              const Expanded(
+                child: Text(
+                  'Recortes',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-            )
-            .toList(),
+              IconButton(
+                tooltip: 'Recorte anterior',
+                onPressed: selected > 0 ? () => move(selected - 1) : null,
+                icon: Icon(
+                  Icons.chevron_left,
+                  color: selected > 0 ? Colors.white : Colors.white38,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Próximo recorte',
+                onPressed: selected < widget.stories.length - 1
+                    ? () => move(selected + 1)
+                    : null,
+                icon: Icon(
+                  Icons.chevron_right,
+                  color: selected < widget.stories.length - 1
+                      ? Colors.white
+                      : Colors.white38,
+                ),
+              ),
+            ],
+          ),
+          Expanded(
+            child: PageView.builder(
+              controller: controller,
+              itemCount: widget.stories.length,
+              onPageChanged: (i) => setState(() => selected = i),
+              itemBuilder: (context, i) {
+                final p = widget.stories[i];
+                final expired =
+                    p.expires != null &&
+                    p.expires! * 1000 <= DateTime.now().millisecondsSinceEpoch;
+                return LayoutBuilder(
+                  builder: (context, bounds) => Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (!expired && p.photos.isNotEmpty)
+                        PostPhotoView(
+                          photo: p.photos.first,
+                          fit: BoxFit.contain,
+                        ),
+                      if (expired)
+                        const Center(
+                          child: Text(
+                            'Este recorte expirou.',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      if (!expired)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            constraints: BoxConstraints(
+                              maxHeight: bounds.maxHeight * .6,
+                            ),
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Color(0x00101713),
+                                  Color(0xE6101713),
+                                  Color(0xFF101713),
+                                ],
+                                stops: [0, .25, 1],
+                              ),
+                            ),
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(
+                                24,
+                                56,
+                                24,
+                                24,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    p.author,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    p.text,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 17,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      const Expanded(
+                                        child: Text(
+                                          'RECORTE · 24 HORAS',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontSize: 11,
+                                            letterSpacing: 1,
+                                          ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        tooltip: 'Denunciar recorte',
+                                        icon: const Icon(
+                                          Icons.flag_outlined,
+                                          color: Colors.white,
+                                        ),
+                                        onPressed: () {
+                                          if (widget.preview) {
+                                            showFeedback(
+                                              context,
+                                              'Demonstração: nenhuma denúncia foi enviada.',
+                                            );
+                                          } else {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute<void>(
+                                                builder: (_) => DenunciaScreen(
+                                                  target: p.id,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     ),
   );
@@ -887,7 +954,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Comentários')),
+    appBar: AppBar(title: Text('Comentários')),
     body: ContentFrame(
       child: Column(
         children: [
@@ -924,7 +991,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                       );
                     }
                   },
-                  icon: const Icon(Icons.flag_outlined),
+                  icon: Icon(Icons.flag_outlined),
                 ),
               ),
             ),
@@ -932,14 +999,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: text,
                       maxLength: 500,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Comentário respeitoso',
                       ),
                     ),
@@ -947,7 +1014,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
                   IconButton(
                     tooltip: 'Enviar comentário',
                     onPressed: busy ? null : send,
-                    icon: const Icon(Icons.send),
+                    icon: Icon(Icons.send),
                   ),
                 ],
               ),

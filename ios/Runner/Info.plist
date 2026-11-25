@@ -68,5 +68,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+    <key>NSCameraUsageDescription</key>
+    <string>Captura opcional para o experimento acadêmico de estimativa de faixa etária do Conexia.</string>
 </dict>
 </plist>

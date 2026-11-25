@@ -216,7 +216,7 @@ class _FamilyActivityState extends State<FamilyActivityScreen> {
                 Text(data['notice'] as String),
                 const SizedBox(height: 8),
                 const Text(
-                  'Histórico por até 30 dias. A lista mostra os 50 registros mais recentes do período. Este acompanhamento inclui as publicações do feed, não os stories.',
+                  'Histórico por até 30 dias. A lista mostra os 50 registros mais recentes do período. Este acompanhamento inclui as publicações do feed, não os recortes.',
                 ),
                 const SizedBox(height: 16),
                 Wrap(

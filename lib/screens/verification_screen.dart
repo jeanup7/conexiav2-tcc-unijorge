@@ -14,7 +14,8 @@ class VerificationScreen extends StatefulWidget {
   State<VerificationScreen> createState() => _VerificationScreenState();
 }
 
-class _VerificationScreenState extends State<VerificationScreen> {
+class _VerificationScreenState extends State<VerificationScreen>
+    with WidgetsBindingObserver {
   final email = TextEditingController(),
       code = TextEditingController(),
       password = TextEditingController();
@@ -24,14 +25,27 @@ class _VerificationScreenState extends State<VerificationScreen> {
   void initState() {
     super.initState();
     development = widget.developmentToken;
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     email.dispose();
     code.dispose();
     password.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState value) {
+    if (value == AppLifecycleState.resumed &&
+        mounted &&
+        !widget.recovery &&
+        AppScope.of(context).usesFirebase &&
+        !busy) {
+      firebaseAction(false);
+    }
   }
 
   Future<void> action(bool send) async {
@@ -73,6 +87,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
   Future<void> firebaseAction(bool send) async {
     if (busy) return;
     final state = AppScope.of(context);
+    final version = state.api.sessionVersion;
     setState(() {
       busy = true;
       message = null;
@@ -83,13 +98,14 @@ class _VerificationScreenState extends State<VerificationScreen> {
           throw const FormatException('Informe seu e-mail.');
         }
         await state.auth!.recover(email.text);
+        state.api.checkSession(version);
         if (mounted) {
           setState(
             () => message = 'Se a conta existir, você receberá um link para redefinir a senha. Confira também o spam.',
           );
         }
       } else if (send) {
-        await state.auth!.sendVerification();
+        await state.sendVerificationEmail();
         if (mounted) {
           setState(
             () => message = 'Link de confirmação enviado. Confira sua caixa de entrada e o spam.',
@@ -141,6 +157,12 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   ? 'Receba um link para escolher uma nova senha.'
                   : 'Envie o link de confirmação para ${state.auth!.email ?? "seu e-mail"}. Depois de abrir o link, volte aqui e toque em Já confirmei.',
             ),
+            if (!widget.recovery) ...[
+              const SizedBox(height: 12),
+              const Text(
+                'A confirmação do e-mail valida o acesso à caixa postal. Para menores, o feed também depende da confirmação do responsável, do vínculo ativo e da escolha do apelido.',
+              ),
+            ],
             const SizedBox(height: 20),
             if (widget.recovery)
               TextField(

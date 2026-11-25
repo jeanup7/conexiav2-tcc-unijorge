@@ -59,7 +59,7 @@ class AdministrationTests(unittest.TestCase):
         self.call('PATCH','/admin/reports/r',{'action':'remove'})
         self.assertIsNone(self.repo.one("SELECT id FROM posts WHERE id='p'"))
         self.assertEqual('removed',self.repo.one("SELECT status FROM reports WHERE id='r'")['status'])
-        self.assertEqual(1,len(self.repo.rows('SELECT * FROM notifications')))
+        self.assertEqual(2,len(self.repo.rows('SELECT * FROM notifications')))
         self.assertEqual(1,len(self.repo.rows("SELECT * FROM audit WHERE event='moderation.remove'")))
         self.denied(409,lambda:self.call('PATCH','/admin/reports/r',{'action':'dismiss'}))
 

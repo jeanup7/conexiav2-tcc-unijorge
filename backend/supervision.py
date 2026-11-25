@@ -89,7 +89,6 @@ class Supervision:
         exposed=self.r.one('SELECT id FROM feed_views WHERE child=? AND post=? AND last_seen>=?',(child['id'],pid,time.time()-30*86400)) or self.r.one('SELECT id FROM family_discussions WHERE child=? AND guardian=? AND post=?',(child['id'],link['guardian'],pid))
         post=self.post(child,pid)
         if not exposed or not post or mid not in post['mediaItems']: raise ApiError(404,'Imagem indisponível.')
-        import base64
         row=self.r.one('SELECT mime,data FROM media WHERE id=?',(mid,))
         if not row: raise ApiError(404,'Imagem indisponível.')
-        return {'mime':row['mime'],'data':base64.b64encode(row['data']).decode()}
+        return self.s.read_media(mid)

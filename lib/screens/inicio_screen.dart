@@ -1,3 +1,6 @@
+import 'social/composer_screen.dart';
+import '../theme/appearance.dart';
+import '../widgets/social/conexia_compass.dart';
 import '../widgets/design_system.dart';
 import 'nickname_setup.dart';
 import 'social/feed_preview_screen.dart';
@@ -12,6 +15,8 @@ import 'social/search_screen.dart';
 import 'perfil_infantil_screen.dart';
 import 'verification_screen.dart';
 import 'admin_screen.dart';
+import 'school_screen.dart';
+import 'enrollment_review_screen.dart';
 
 class InicioScreen extends StatefulWidget {
   const InicioScreen({super.key});
@@ -42,20 +47,16 @@ class _InicioScreenState extends State<InicioScreen> {
         centerTitle: true,
         title: const BrandMark(compact: true),
         actions: [
-          if (user.isAdmin)
-            IconButton(
-              tooltip: 'Administração',
-              icon: const Icon(LucideIcons.settings),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(builder: (_) => const AdminScreen()),
-              ),
-            ),
           IconButton(
-            tooltip: user.needsGuardian ? 'Meu responsável' : 'Minha família',
-            icon: const Icon(Icons.family_restroom_outlined),
-            onPressed: () =>
-                Navigator.pushNamed(context, '/painel-responsavel'),
+            tooltip: 'Aparência',
+            icon: const Icon(Icons.contrast),
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              useSafeArea: true,
+              showDragHandle: true,
+              builder: (_) =>
+                  const SingleChildScrollView(child: AppearanceControl()),
+            ),
           ),
           IconButton(
             tooltip: 'Notificações',
@@ -67,10 +68,48 @@ class _InicioScreenState extends State<InicioScreen> {
             ),
             icon: const Icon(LucideIcons.bell),
           ),
-          IconButton(
-            tooltip: 'Privacidade e segurança',
-            onPressed: () => Navigator.pushNamed(context, '/seguranca'),
-            icon: const Icon(LucideIcons.shieldCheck),
+          PopupMenuButton<String>(
+            tooltip: 'Conta e segurança',
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'admin') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(builder: (_) => const AdminScreen()),
+                );
+              } else if (value == 'school') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SchoolHubScreen(),
+                  ),
+                );
+              } else {
+                Navigator.pushNamed(context, value);
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: '/painel-responsavel',
+                child: Text(
+                  user.needsGuardian ? 'Meu responsável' : 'Minha família',
+                ),
+              ),
+              const PopupMenuItem(
+                value: '/seguranca',
+                child: Text('Privacidade e segurança'),
+              ),
+              if (!user.needsGuardian && user.active)
+                const PopupMenuItem(
+                  value: 'school',
+                  child: Text('Área do tutor'),
+                ),
+              if (user.isAdmin)
+                const PopupMenuItem(
+                  value: 'admin',
+                  child: Text('Administração'),
+                ),
+            ],
           ),
         ],
       ),
@@ -127,6 +166,23 @@ class _InicioScreenState extends State<InicioScreen> {
                       ),
                       child: const Text('Confirmar e-mail'),
                     ),
+                  if (user.reviewRequired &&
+                      user.enrollmentState != 'approved') ...[
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.fact_check_outlined),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => const EnrollmentReviewScreen(),
+                        ),
+                      ),
+                      label: const Text('Acompanhar revisão do cadastro'),
+                    ),
+                    Text(
+                      'Situação: ${reviewLabels[user.enrollmentState] ?? "Aguardando revisão"}',
+                    ),
+                  ],
                   if (user.needsGuardian && !user.approved) ...[
                     const SizedBox(height: 12),
                     OutlinedButton(
@@ -164,8 +220,18 @@ class _InicioScreenState extends State<InicioScreen> {
                 ),
               ),
       ),
+      floatingActionButton: user.active
+          ? FloatingActionButton.small(
+              tooltip: 'Criar publicação',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(builder: (_) => const ComposerScreen()),
+              ),
+              child: const Icon(Icons.add),
+            )
+          : null,
       bottomNavigationBar: user.active
-          ? NavigationBar(
+          ? ConexiaCompass(
               selectedIndex: selected,
               onDestinationSelected: (v) => setState(() {
                 selected = v;

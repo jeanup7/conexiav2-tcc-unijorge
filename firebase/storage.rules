@@ -1,0 +1,10 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Clients never access objects directly. The API uses server credentials
+    // and checks current profile, family, contact and blocking permissions.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

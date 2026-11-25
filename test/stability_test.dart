@@ -234,7 +234,7 @@ void main() {
       find.textContaining('Feed survives', findRichText: true),
       findsWidgets,
     );
-    expect(find.textContaining('stories'), findsWidgets);
+    expect(find.textContaining('recortes'), findsWidgets);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -346,6 +346,10 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
+    expect(find.text('Tentar novamente'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('Tentar novamente'));
     await tester.pumpAndSettle();
     expect(find.text('Tentar novamente'), findsOneWidget);
     expect(tester.takeException(), isNull);

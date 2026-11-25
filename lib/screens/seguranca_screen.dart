@@ -1,4 +1,6 @@
 import 'contact_requests_screen.dart';
+import 'vision_screen.dart';
+import 'enrollment_review_screen.dart';
 
 import 'dart:convert';
 
@@ -166,6 +168,32 @@ class _SegurancaScreenState extends State<SegurancaScreen> {
             ),
             const SizedBox(height: 24),
             ListTile(
+              leading: const Icon(Icons.shield_outlined),
+              title: const Text('Regras de convivência e proteção'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => showDialog<void>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  title: const Text('Boas conexões, com cuidado'),
+                  content: const SingleChildScrollView(
+                    child: Text(
+                      'Respeite as pessoas. Bullying, assédio, discriminação e ameaças podem levar à remoção de conteúdo e suspensão da conta.\n\n'
+                      'Proteja dados pessoais. Não publique endereço, escola, telefone, senhas ou imagens íntimas. Exploração de menores, golpes e violência devem ser denunciados.\n\n'
+                      'Perfis de menores são privados e suas conexões precisam da autorização do responsável. Mensagens só podem ser enviadas entre contatos aprovados com a função habilitada.\n\n'
+                      'Use Bloquear para interromper uma conexão. Para relatar uma mensagem específica, pressione-a e escolha Denunciar esta mensagem. O responsável recebe um aviso de apoio somente se você escolher essa opção.\n\n'
+                      'As denúncias entram em uma fila de revisão humana. A prioridade não representa uma decisão automática. Este protótipo não oferece atendimento contínuo nem detecção automática de imagens. Em risco imediato, procure um adulto de confiança.',
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      child: const Text('Entendi'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            ListTile(
               leading: const Icon(Icons.block),
               title: const Text('Pessoas bloqueadas'),
               trailing: const Icon(Icons.chevron_right),
@@ -198,6 +226,25 @@ class _SegurancaScreenState extends State<SegurancaScreen> {
               leading: const Icon(Icons.family_restroom),
               title: const Text('Situação do vínculo familiar'),
               onTap: () => Navigator.pushNamed(context, '/painel-responsavel'),
+            ),
+            if (user.needsGuardian)
+              ListTile(
+                leading: const Icon(Icons.fact_check_outlined),
+                title: const Text('Revisão do meu cadastro'),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const EnrollmentReviewScreen(),
+                  ),
+                ),
+              ),
+            ListTile(
+              leading: const Icon(Icons.download_outlined),
+              title: const Text('Laboratório de verificação etária'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(builder: (_) => const VisionScreen()),
+              ),
             ),
             ListTile(
               leading: const Icon(Icons.download_outlined),
@@ -292,17 +339,42 @@ class _BlocksScreenState extends State<BlocksScreen> {
   );
 }
 
-class ReportsScreen extends StatelessWidget {
+class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
   @override
+  State<ReportsScreen> createState() => _ReportsScreenState();
+}
+
+class _ReportsScreenState extends State<ReportsScreen> {
+  int revision = 0;
+  @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Minhas denúncias')),
+    appBar: AppBar(
+      title: const Text('Minhas denúncias'),
+      actions: [
+        IconButton(
+          tooltip: 'Atualizar denúncias',
+          icon: const Icon(Icons.refresh),
+          onPressed: () => setState(() => revision++),
+        ),
+      ],
+    ),
     body: ContentFrame(
       child: AsyncItems(
+        key: ValueKey(revision),
         load: () => AppScope.of(context).social.list('/reports'),
         builder: (_, v) => ListTile(
           title: Text(v['reason'] as String),
-          subtitle: Text('Protocolo: ${v['id']}\nStatus: ${v['status']}'),
+          subtitle: Text(
+            [
+              'Protocolo: ${v['id']}',
+              'Situação: ${{'pending': 'Aguardando análise', 'removed': 'Conteúdo removido', 'dismissed': 'Analisada e encerrada'}[v['status']] ?? 'Em acompanhamento'}',
+              if (v['decisionReason'] != null)
+                'Resultado: ${v['decisionReason']}',
+              if (v['decidedAt'] is num)
+                'Decisão em: ${MaterialLocalizations.of(context).formatFullDate(DateTime.fromMillisecondsSinceEpoch(((v['decidedAt'] as num) * 1000).round()))}',
+            ].join('\n'),
+          ),
         ),
       ),
     ),

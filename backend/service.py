@@ -10,9 +10,16 @@ from repository import Repository
 from security import ApiError, token, digest, password_hash, password_matches, text, email, age, password as validate_password
 
 class Service:
-    def __init__(self, repo, development=False, firebase=None, media_quota=100*1024*1024):
+    def __init__(self, repo, development=False, firebase=None, media_quota=100*1024*1024, media_storage=None, integration_test=False, vision_models=None, review_required=False, review_vault=None):
         self.repo, self.development = repo, development
         self.firebase = firebase
+        self.media_storage = media_storage
+        if vision_models is not None and not development:raise ValueError('Vision prototype is development-only')
+        self.vision_models=vision_models
+        self.review_required,self.review_vault=review_required,review_vault
+        if integration_test and not development:raise ValueError('Integration mode is development-only')
+        if getattr(firebase,'emulated',False) and not integration_test:raise ValueError('Auth Emulator requires integration mode')
+        self.integration_test = integration_test
         self.supervision=Supervision(self)
         self.lock = repo.lock
         self.contacts = Contacts(self)
@@ -29,7 +36,7 @@ class Service:
         if count >= ceiling: raise ApiError(429,'Muitas tentativas. Aguarde antes de tentar novamente.')
         self.limits[key]=(expires,count+1)
     def user(self, bearer):
-        row=self.repo.one('SELECT u.* FROM users u JOIN sessions s ON s.user=u.id WHERE s.access=? AND s.expires>?',(digest(bearer),time.time())) if self.development else None
+        row=self.repo.one('SELECT u.* FROM users u JOIN sessions s ON s.user=u.id WHERE s.access=? AND s.expires>?',(digest(bearer),time.time())) if self.development and not self.firebase else None
         if row: return row
         if self.firebase:
             claims=self.firebase.verify(bearer)
@@ -46,7 +53,7 @@ class Service:
         return self.repo.one('SELECT l.*,g.name AS guardian_name,g.verified AS guardian_verified,g.birth AS guardian_birth FROM guardian_links l JOIN users g ON g.id=l.guardian WHERE l.child=?',(u['id'],))
     def suspended(self,uid):
         return bool(self.repo.one("SELECT 1 FROM account_status WHERE user=? AND status='suspended'",(uid,)))
-    def approved(self,u):
+    def family_approved(self,u):
         if age(u['birth'])>=18: return True
         link=self.guardian_link(u)
         if not link or link['state']!='active' or age(link['guardian_birth'])<18: return False
@@ -60,20 +67,30 @@ class Service:
             self.repo.execute('UPDATE users SET verified=? WHERE id=?',(int(verified),link['guardian']))
             return verified
         return bool(link['guardian_verified'])
+    def approved(self,u):
+        from enrollment_review import allowed
+        return self.family_approved(u) and allowed(self,u)
     def nickname_pending(self,u):
         link=self.guardian_link(u) if age(u['birth'])<18 else None
         return bool(link and not link['nickname_selected'])
     def active(self,u):
         if self.suspended(u['id']): raise ApiError(403,'Esta conta está suspensa. Consulte a situação em Privacidade e segurança.','account_suspended')
-        if not u['verified'] or not self.approved(u):
+        if not u['verified'] or not self.family_approved(u):
             raise ApiError(403,'Confirme os e-mails do menor e do responsável e mantenha o vínculo ativo.')
+        if not self.approved(u):raise ApiError(403,'Aguarde a aprovação da revisão do cadastro para acessar as funções sociais.','enrollment_pending')
         if self.nickname_pending(u): raise ApiError(403,'Escolha seu apelido para entrar no feed.')
     def public(self,u,own=False):
         result={k:u[k] for k in ('id','name','bio','private')}
         avatar=self.repo.one('SELECT media FROM profile_media WHERE user=?',(u['id'],))
         result['avatar']=avatar['media'] if avatar else None
+        if age(u['birth'])<18: result['private']=1
         if own: result.update({k:u[k] for k in ('email','verified','messages')},approved=int(self.approved(u)),needsGuardian=age(u['birth'])<18,needsNickname=self.nickname_pending(u),isAdmin=self.development and bool(self.repo.one('SELECT 1 FROM administrators WHERE user=?',(u['id'],))))
         if own: result['accountStatus']='suspended' if self.suspended(u['id']) else 'active'
+        if own:
+            from enrollment_review import current,consent
+            case=current(self,u['id']) if age(u['birth'])<18 else None
+            review_state=case['state'] if case and consent(self,u['id']) else 'revoked' if case else 'not_submitted'
+            result.update(reviewRequired=self.review_required and age(u['birth'])<18,enrollmentState=review_state,familyApproved=self.family_approved(u))
         return result
     def session(self,u):
         access,refresh=token(),token()
@@ -102,7 +119,8 @@ class Service:
         if self.suspended(owner['id']): return False
         if self.blocked(u['id'],owner['id']): return False
         if not owner['verified'] or not self.approved(owner) or self.nickname_pending(owner): return False
-        return not owner['private'] or self.contact(u['id'],owner['id'])
+        # A legacy/imported public flag must never expose a minor's profile.
+        return (age(owner['birth'])>=18 and not owner['private']) or self.contact(u['id'],owner['id'])
     def post(self,u,pid):
         p=self.repo.one('SELECT * FROM posts WHERE id=?',(pid,))
         if not p or (p['expires'] and p['expires']<=time.time()): raise ApiError(404,'Publicação indisponível')
@@ -125,10 +143,41 @@ class Service:
                     result=self._dispatch(method,path,data,bearer,ip)
             # Remote deletion follows the durable local commit and can be retried.
             if method=='DELETE' and path=='/me': self.process_identity_deletions()
-            return result
+        from media_storage import CloudRead
+        from vision import CaptureJob
+        if isinstance(result,CaptureJob):return result.resolve(bearer)
+        from enrollment_review import SubmitCapture,ReviewPhoto
+        if isinstance(result,(SubmitCapture,ReviewPhoto)):return result.resolve(bearer)
+        if isinstance(result,CloudRead):
+            # Download outside the global API lock; then re-check permissions
+            # so a block, pause or deletion during the transfer takes effect.
+            response=result.download()
+            with self.lock:
+                self._guardian_checks={}
+                with self.repo.transaction():
+                    authorized=self._dispatch(method,path,data,bearer,ip)
+                    if not isinstance(authorized,CloudRead) or authorized.reference!=result.reference:
+                        raise ApiError(404,'Imagem indisponível.')
+            return response
+        return result
+
+    def read_media(self, mid):
+        from media_storage import read_media
+        return read_media(self,mid)
+
+    def process_media_jobs(self, limit=3):
+        from media_storage import process_jobs
+        return process_jobs(self,limit)
+
+    def maintain(self):
+        from maintenance import purge
+        with self.lock:
+            purge(self.repo)
+            from enrollment_review import purge as purge_reviews
+            with self.repo.transaction():purge_reviews(self)
 
     def process_identity_deletions(self):
-        if not self.firebase: return
+        if not self.firebase or (self.integration_test and not getattr(self.firebase,'emulated',False)): return
         with self.lock:
             jobs=self.repo.rows('SELECT * FROM identity_deletions WHERE completed IS NULL AND next_attempt<=? ORDER BY created LIMIT 10',(time.time(),))
             for job in jobs:
@@ -142,9 +191,9 @@ class Service:
     def _dispatch(self,method,path,data,bearer,ip,actor=None):
         r=self.repo
         parts=path.strip('/').split('/')
-        if path=='/health': return {'status':'ok','storage':'sqlite','development':self.development,'firebase':self.firebase is not None,'familyFlow':True}
+        if path=='/health': return {'status':'ok','storage':'sqlite','development':self.development,'firebase':self.firebase is not None,'familyFlow':True,'isolatedIntegration':self.integration_test,'authEmulator':getattr(self.firebase,'emulated',False)}
         if path.startswith('/auth/'):
-            if not self.development and path not in ('/auth/firebase','/auth/logout'):
+            if (self.firebase or not self.development) and path not in ('/auth/firebase','/auth/logout'):
                 raise ApiError(404,'Recurso indisponivel.')
             self.limit(('auth',ip),30)
             if path=='/auth/firebase' and method=='POST':
@@ -210,8 +259,17 @@ class Service:
                 r.execute('DELETE FROM challenges WHERE token=?',(c['token'],))
                 self.audit('account.'+kind,c['user']); return {'message':'Operação concluída'}
         u=actor or self.user(bearer); uid=u['id']
+        if path.startswith('/enrollment/') or path=='/admin/enrollments' or path.startswith('/admin/enrollments/'):
+            from enrollment_review import dispatch_review
+            return dispatch_review(self,u,method,path,data)
+        if path.startswith('/vision/'):
+            from vision import dispatch_vision
+            return dispatch_vision(self,u,method,path,data)
         if self.suspended(uid) and path not in ('/me','/me/export','/auth/logout','/reports','/blocks') and not path.startswith('/blocks/'):
             self.active(u)
+        if path=='/school' or path.startswith('/school/'):
+            from school import dispatch_school
+            return dispatch_school(self,u,method,path,data)
         if path=='/admin' or path.startswith('/admin/'):
             from administration import dispatch_admin
             return dispatch_admin(self,u,method,path,data)
@@ -232,14 +290,27 @@ class Service:
         if path=='/me/export' and method=='GET':
             result={'profile':dict(self.public(u,True),birth=u['birth'])}
             for table,field in [('posts','user'),('comments','user'),('reports','user'),('blocks','user')]: result[table]=r.rows(f'SELECT * FROM {table} WHERE {field}=?',(uid,))
+            result['moderationHistory']=r.rows('SELECT status,reason,created FROM account_moderation WHERE target=? ORDER BY created',(uid,))
+            result['reportDecisions']=r.rows('SELECT d.report,d.action,d.reason,d.created FROM report_decisions d JOIN reports r ON r.id=d.report WHERE r.user=?',(uid,))
+            result['reportContext']=r.rows('SELECT c.* FROM report_context c JOIN reports r ON r.id=c.report WHERE r.user=?',(uid,))
             result['messages']=r.rows('SELECT * FROM messages WHERE sender=? OR recipient=?',(uid,uid))
             result['likes']=r.rows('SELECT post FROM likes WHERE user=?',(uid,))
             result['contacts']=r.rows('SELECT target,approved FROM contacts WHERE user=?',(uid,))
             result['notifications']=r.rows('SELECT id,text,created FROM notifications WHERE user=?',(uid,))
-            result['media']=r.rows('SELECT id,mime,length(data) bytes FROM media WHERE user=?',(uid,))
+            result['media']=r.rows('SELECT id,mime,bytes FROM media_inventory WHERE user=?',(uid,))
             result['contactRequests']=r.rows('SELECT id,source,target,accepted,status,created,expires FROM contact_requests WHERE source=? OR target=?',(uid,uid))
             # Export only this user's actions, without exposing another family's private names.
             result['consents']=r.rows('SELECT request,child,approved FROM contact_consents WHERE guardian=? OR child=?',(uid,uid))
+            result['schoolLinks']=r.rows('SELECT id,child,guardian,tutor,scope,state,consent_version,created,updated FROM tutor_links WHERE child=? OR guardian=? OR tutor=?',(uid,uid,uid))
+            result['schoolPrivacy']=r.rows('SELECT mode,updated FROM school_privacy WHERE child=?',(uid,))
+            result['schoolActions']=r.rows('SELECT event,created FROM school_audit WHERE actor=?',(uid,))
+            result['visionSessions']=r.rows('SELECT id,state,created,result FROM vision_sessions WHERE user=? AND created>?',(uid,time.time()-86400))
+            result['visionConsents']=r.rows('SELECT child,granted,version,updated FROM vision_consents WHERE child=? OR guardian=?',(uid,uid))
+            result['visionSessionLimit']=r.one('SELECT reset,count FROM vision_limits WHERE user=?',(uid,))
+            result['enrollmentReviews']=r.rows('SELECT id,state,reason,created,updated FROM enrollment_reviews WHERE child=? OR guardian=?',(uid,uid))
+            result['enrollmentConsents']=r.rows('SELECT child,granted,version,updated FROM review_consents WHERE child=? OR guardian=?',(uid,uid))
+            result['enrollmentConsentHistory']=r.rows('SELECT granted,version,created FROM review_consent_events WHERE child=? OR guardian=? ORDER BY created',(uid,uid))
+            result['enrollmentEvents']=r.rows('SELECT e.action,e.reason,e.created FROM review_events e JOIN enrollment_reviews c ON c.id=e.review WHERE c.child=? OR c.guardian=? ORDER BY e.created',(uid,uid))
             return result
         if path=='/me' and method=='DELETE':
             identity=r.one('SELECT uid FROM firebase_identities WHERE user=?',(uid,))
@@ -257,7 +328,7 @@ class Service:
         if path=='/guardian/status' and method=='GET':
             approved=self.approved(u)
             link=self.guardian_link(u)
-            return {'required':age(u['birth'])<18,'approved':approved,'childVerified':bool(u['verified']),'guardianVerified':bool(link and link['guardian_verified']),'guardianName':link['guardian_name'] if link else None,'state':link['state'] if link else 'unlinked','needsNickname':self.nickname_pending(u)}
+            return {'required':age(u['birth'])<18,'approved':approved,'familyApproved':self.family_approved(u),'childVerified':bool(u['verified']),'guardianVerified':bool(link and link['guardian_verified']),'guardianName':link['guardian_name'] if link else None,'state':link['state'] if link else 'unlinked','needsNickname':self.nickname_pending(u)}
         if path=='/guardian/request' and method=='POST':
             return {'message':'Entre na conta do responsável, confirme o e-mail e use o painel para criar ou vincular o perfil do menor.'}
         if path=='/guardian/children':
@@ -279,6 +350,7 @@ class Service:
                 existing=r.one('SELECT c.* FROM firebase_identities f JOIN users c ON c.id=f.user WHERE f.uid=?',(child_uid,))
                 if existing:
                     if age(existing['birth'])>=18: raise ApiError(400,'Este perfil já é adulto.')
+                    if existing['birth']!=birth: raise ApiError(409,'A data de nascimento não corresponde ao perfil já cadastrado. Revise os dados para retomar o vínculo.')
                     link=self.guardian_link(existing)
                     if link and link['guardian']!=uid: raise ApiError(409,'Este perfil já está vinculado a outro responsável.')
                     if not link and existing['guardian']!=u['email']: raise ApiError(403,'O e-mail do responsável não corresponde ao cadastro anterior.')
@@ -325,12 +397,10 @@ class Service:
             if len(parts)==4 and parts[3]=='discussions' and method=='POST': return self.supervision.discuss(u,child_id,data)
             if len(parts)==8 and parts[3:5]==['activity','posts'] and parts[6]=='media' and method=='GET': return self.supervision.media(u,child_id,parts[5],parts[7])
         if path=='/notifications' and method=='GET': return {'items':r.rows('SELECT id,text,created FROM notifications WHERE user=? ORDER BY created DESC LIMIT 50',(uid,))}
-        if path=='/reports' and method=='GET': return {'items':r.rows('SELECT * FROM reports WHERE user=? ORDER BY created DESC',(uid,))}
+        if path=='/reports' and method=='GET': return {'items':r.rows('SELECT r.*,d.reason decisionReason,d.created decidedAt FROM reports r LEFT JOIN report_decisions d ON d.report=r.id WHERE r.user=? ORDER BY r.created DESC',(uid,))}
         if path=='/reports' and method=='POST':
-            self.limit(('reports',uid),10,3600)
-            reason=text(data,'reason',3,1000); target=text(data,'target',1,200); rid=token()
-            r.execute('INSERT INTO reports(id,user,target,reason,created) VALUES(?,?,?,?,?)',(rid,uid,target,reason,time.time()))
-            self.audit('report.created',uid); return {'id':rid,'status':'pending','message':'Registrada. Atendimento humano ainda precisa ser configurado.'}
+            from safety import submit_report
+            return submit_report(self,u,data)
         if path=='/blocks' and method=='GET': return {'items':r.rows('SELECT u.id,u.name FROM users u JOIN blocks b ON b.target=u.id WHERE b.user=?',(uid,))}
         if path=='/blocks' and method=='POST':
             target=text(data,'target')
@@ -376,9 +446,11 @@ class Service:
             self.limit(('uploads',uid),40,3600)
             from images import normalize
             mime,content=normalize(data)
-            used=r.one('SELECT coalesce(sum(length(data)),0) n FROM media WHERE user=?',(uid,))['n']
+            used=r.one('SELECT coalesce(sum(bytes),0) n FROM media_inventory WHERE user=?',(uid,))['n']
             if used+len(content)>self.media_quota: raise ApiError(413,'Limite de armazenamento da conta atingido.')
-            mid=token(); r.execute('INSERT INTO media VALUES(?,?,?,?)',(mid,uid,mime,content)); return {'id':mid}
+            mid=token(); r.execute('INSERT INTO media VALUES(?,?,?,?)',(mid,uid,mime,content))
+            if self.media_storage:r.execute('INSERT INTO media_uploads VALUES(?,?)',(mid,time.time()))
+            return {'id':mid}
         if len(parts)==2 and parts[0]=='media' and method=='GET':
             m=r.one('SELECT * FROM media WHERE id=?',(parts[1],))
             if not m: raise ApiError(404,'Imagem indisponível')
@@ -386,7 +458,7 @@ class Service:
                 posts=r.rows('SELECT DISTINCT p.id FROM posts p LEFT JOIN post_media pm ON pm.post=p.id WHERE p.media=? OR pm.media=?',(m['id'],m['id']))
                 profile=r.one('SELECT u.* FROM profile_media pm JOIN users u ON u.id=pm.user WHERE pm.media=?',(m['id'],))
                 if not (profile and self.visible(u,profile)) and not any(self._can_post(u,p['id']) for p in posts): raise ApiError(404,'Imagem indisponível')
-            return {'mime':m['mime'],'data':base64.b64encode(m['data']).decode()}
+            return self.read_media(m['id'])
         if path in ('/posts','/stories'):
             story=int(path=='/stories')
             if method=='POST':
@@ -473,7 +545,17 @@ class Service:
                     cid=token(); r.execute('INSERT INTO comments VALUES(?,?,?,?,?)',(cid,uid,pid,text(data,'text',1,500),time.time())); return {'id':cid}
         if path=='/conversations' and method=='GET':
             rows=r.rows('SELECT DISTINCT CASE WHEN sender=? THEN recipient ELSE sender END AS id FROM messages WHERE sender=? OR recipient=?',(uid,uid,uid))
-            return {'items':[self.public(r.one('SELECT * FROM users WHERE id=?',(v['id'],))) for v in rows if not self.blocked(uid,v['id'])]}
+            items=[]
+            for row in rows:
+                if self.blocked(uid,row['id']) or not self.contact(uid,row['id']): continue
+                other=r.one('SELECT * FROM users WHERE id=?',(row['id'],))
+                if not other: continue
+                try: self.active(other)
+                except ApiError as error:
+                    if error.status==403: continue
+                    raise
+                items.append(self.public(other))
+            return {'items':items}
         if len(parts) in (2,3) and parts[0]=='messages':
             target=parts[1]; other=r.one('SELECT * FROM users WHERE id=?',(target,))
             if not other or self.blocked(uid,target) or not self.contact(uid,target): raise ApiError(403,'Mensagens exigem um contato aprovado')

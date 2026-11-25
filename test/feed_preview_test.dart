@@ -33,13 +33,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.textContaining('PRÉVIA LOCAL'), findsOneWidget);
+      expect(find.textContaining('PRÉVIA LOCAL'), findsWidgets);
       expect(find.text('luffy'), findsWidgets);
-      await tester.ensureVisible(find.byTooltip('Curtir').first);
+      await tester.ensureVisible(find.byTooltip('Dar impulso').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Curtir').first);
+      await tester.tap(find.byTooltip('Dar impulso').first);
       await tester.pumpAndSettle();
-      expect(find.text('129 curtidas'), findsOneWidget);
+      expect(find.text('129'), findsOneWidget);
       expect(requests, 0);
       expect(state.account, isNull);
       expect(tester.takeException(), isNull);
@@ -73,7 +73,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(avatar);
     await tester.pumpAndSettle();
-    expect(find.text('1 publicações • perfil de demonstração'), findsOneWidget);
+    expect(find.bySemanticsLabel('1 publicações'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('Próxima foto').first);
@@ -81,13 +81,17 @@ void main() {
     await tester.tap(find.byTooltip('Próxima foto').first);
     await tester.pumpAndSettle();
     expect(find.text('2/2'), findsOneWidget);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Pesquisa'));
     await tester.tap(find.text('Pesquisa'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'peter');
     await tester.pumpAndSettle();
     expect(find.text('peter.parker'), findsOneWidget);
     expect(find.text('luffy'), findsNothing);
-    await tester.tap(find.text('Criar'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('Criar publicação'));
+    await tester.tap(find.byTooltip('Criar publicação'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'Meu carrossel');
     for (final asset in ['luffy.jpg', 'peter_parker.jpg']) {
@@ -119,10 +123,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Publicar na prévia'));
     await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Perfil'));
     await tester.tap(find.text('Perfil'));
     await tester.pumpAndSettle();
-    expect(find.text('1 publicações • perfil de demonstração'), findsOneWidget);
+    expect(find.bySemanticsLabel('1 publicações'), findsOneWidget);
     expect(find.byIcon(Icons.collections), findsOneWidget);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Feed'));
     await tester.tap(find.text('Feed'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Meu carrossel'), findsOneWidget);

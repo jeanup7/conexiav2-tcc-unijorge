@@ -50,9 +50,15 @@ class FirebaseTests(unittest.TestCase):
         self.assertTrue(self.identity.revoked)
         self.expect(401,lambda:self.call('GET','/me'))
     def test_no_email_linking_to_local_account(self):
-        self.api.dispatch('POST','/auth/register',{'email':'firebase@example.com','password':'a sufficiently long password','name':'Local','birth':'2000-01-01'})
+        Service(self.repo,development=True).dispatch('POST','/auth/register',{'email':'firebase@example.com','password':'a sufficiently long password','name':'Local','birth':'2000-01-01'})
         self.expect(409,self.register)
         self.assertEqual([],self.repo.rows('SELECT * FROM firebase_identities'))
+    def test_firebase_mode_rejects_legacy_auth_routes_and_local_sessions(self):
+        self.register()
+        for path in ['/auth/register','/auth/login','/auth/verify','/auth/refresh','/auth/recover','/auth/reset']:
+            with self.subTest(path=path):self.expect(404,lambda:self.call('POST',path,{'email_verified':True}))
+        local=self.api.session(self.repo.one('SELECT * FROM users'))['accessToken']
+        self.expect(401,lambda:self.api.dispatch('GET','/me',{},local))
     def test_delete_requires_recent_auth_and_removes_both_accounts(self):
         self.register()
         self.identity.claims['auth_time']=time.time()-600

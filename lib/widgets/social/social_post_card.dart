@@ -1,14 +1,10 @@
-import '../design_system.dart';
-import '../../theme/design_tokens.dart';
-import '../../models/content_categories.dart';
-import 'profile_avatar.dart';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../models/models.dart';
+import '../../models/content_categories.dart';
+import '../../theme/design_tokens.dart';
 import 'post_gallery.dart';
+import 'profile_avatar.dart';
 
 class SocialPostCard extends StatefulWidget {
   const SocialPostCard({
@@ -27,281 +23,236 @@ class SocialPostCard extends StatefulWidget {
   final ValueChanged<String> onAction;
   final VoidCallback onComment, onShare;
   final VoidCallback? onProfile, onDiscuss;
-
   @override
   State<SocialPostCard> createState() => _SocialPostCardState();
 }
 
 class _SocialPostCardState extends State<SocialPostCard> {
   bool saved = false;
-
   @override
   Widget build(BuildContext context) {
     final p = widget.post;
-    final photo = p.photos.firstOrNull;
-    final ImageProvider? image = photo?.asset != null
-        ? AssetImage(photo!.asset!)
-        : photo?.bytes != null
-        ? MemoryImage(photo!.bytes!)
-        : null;
+    final variant = p.id.codeUnits.fold<int>(0, (a, b) => a + b) % 3;
+    final textOnly = p.photos.isEmpty;
     return Container(
-      margin: const EdgeInsets.only(bottom: 24),
+      margin: EdgeInsets.fromLTRB(
+        variant == 1 ? 12 : 0,
+        0,
+        variant == 2 ? 12 : 0,
+        28,
+      ),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: ConexiaColors.line),
-        boxShadow: ConexiaColors.shadow,
+        color: textOnly
+            ? ConexiaPalette.of(context).tinted
+            : ConexiaPalette.of(context).surface,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(8),
+          topRight: Radius.circular(36),
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(8),
+        ),
+        border: Border.all(color: ConexiaPalette.of(context).line),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 6, 14),
+            padding: EdgeInsets.fromLTRB(20, 20, 8, 12),
             child: Row(
               children: [
                 InkWell(
                   key: ValueKey('profile-${p.userId}'),
                   onTap: widget.onProfile,
-                  borderRadius: BorderRadius.circular(24),
                   child: Semantics(
                     button: true,
                     label: 'Abrir perfil de ${p.author}',
                     child: ProfileAvatar(
                       media: p.authorAvatar,
-                      image: image,
-                      radius: 22,
+                      image: p.photos.firstOrNull?.asset != null
+                          ? AssetImage(p.photos.first.asset!)
+                          : null,
+                      radius: 20,
                       label: 'Foto de ${p.author}',
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      GestureDetector(
-                        onTap: widget.onProfile,
-                        child: Text(
-                          p.author,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                            color: Color(0xFF22242C),
-                          ),
+                      Text(
+                        (contentCategories[p.category] ?? 'Ideias')
+                            .toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          letterSpacing: 2,
+                          color: ConexiaPalette.of(context).primary,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.preview
-                            ? 'Comunidade criativa • prévia'
-                            : contentCategories[p.category] ?? 'Outros',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: ConexiaColors.muted,
+                      TextButton(
+                        onPressed: widget.onProfile,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          alignment: Alignment.centerLeft,
+                        ),
+                        child: Text(
+                          p.author,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: ConexiaPalette.of(context).text,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(LucideIcons.ellipsisVertical, size: 21),
                   tooltip: 'Opções da publicação',
+                  icon: Icon(Icons.more_horiz),
                   onSelected: widget.onAction,
                   itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'report',
-                      child: Text('Denunciar'),
-                    ),
+                    PopupMenuItem(value: 'report', child: Text('Denunciar')),
                     if (!widget.own)
-                      const PopupMenuItem(
-                        value: 'block',
-                        child: Text('Bloquear'),
-                      ),
+                      PopupMenuItem(value: 'block', child: Text('Bloquear')),
                     if (widget.own) ...[
-                      const PopupMenuItem(value: 'edit', child: Text('Editar')),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Text('Excluir'),
-                      ),
+                      PopupMenuItem(value: 'edit', child: Text('Editar')),
+                      PopupMenuItem(value: 'delete', child: Text('Excluir')),
                     ],
                   ],
                 ),
               ],
             ),
           ),
-          if (p.photos.isNotEmpty)
-            PostGallery(
-              photos: p.photos,
-              onDoubleTap: () {
-                if (!p.liked) widget.onAction('like');
-              },
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 24, 20),
+            child: Text(
+              p.text,
+              style: TextStyle(
+                fontSize: textOnly ? 24 : 18,
+                fontWeight: textOnly ? FontWeight.w800 : FontWeight.w600,
+                height: 1.4,
+                letterSpacing: -.4,
+                color: ConexiaPalette.of(context).text,
+              ),
+            ),
+          ),
+          if (!textOnly)
+            Padding(
+              padding: EdgeInsets.only(left: 12, right: 12),
+              child: ClipRRect(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                ),
+                child: PostGallery(
+                  photos: p.photos,
+                  aspectRatio: variant == 0 ? 1.65 : 1.25,
+                  onDoubleTap: () {
+                    if (!p.liked) widget.onAction('like');
+                  },
+                ),
+              ),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(6, 5, 6, 0),
-            child: Row(
+            padding: EdgeInsets.all(12),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
               children: [
-                PressFeedback(
-                  child: IconButton(
-                    tooltip: p.liked ? 'Descurtir' : 'Curtir',
-                    onPressed: () => widget.onAction('like'),
-                    icon: AnimatedSwitcher(
-                      duration: MediaQuery.disableAnimationsOf(context)
-                          ? Duration.zero
-                          : const Duration(milliseconds: 160),
-                      child:
-                          Icon(
-                                p.liked
-                                    ? Icons.favorite_rounded
-                                    : LucideIcons.heart,
-                                key: ValueKey(p.liked),
-                                color: p.liked
-                                    ? const Color(0xFFE14E69)
-                                    : ConexiaColors.ink,
-                                size: 27,
-                              )
-                              .animate(
-                                target: p.liked ? 1 : 0,
-                                autoPlay: !MediaQuery.disableAnimationsOf(
-                                  context,
-                                ),
-                              )
-                              .scaleXY(
-                                begin: MediaQuery.disableAnimationsOf(context)
-                                    ? 1
-                                    : .92,
-                                end: 1,
-                                duration:
-                                    MediaQuery.disableAnimationsOf(context)
-                                    ? Duration.zero
-                                    : const Duration(milliseconds: 180),
-                                curve: Curves.easeOut,
-                              ),
-                    ),
-                  ),
+                _action(
+                  p.liked ? 'Retirar impulso' : 'Dar impulso',
+                  Icons.bolt,
+                  () => widget.onAction('like'),
+                  label: '${p.likes}',
+                  active: p.liked,
                 ),
-                IconButton(
-                  tooltip: 'Comentar',
-                  onPressed: widget.onComment,
-                  icon: const Icon(
-                    LucideIcons.messageCircle,
-                    size: 25,
-                    color: ConexiaColors.ink,
-                  ),
+                _action('Comentar', Icons.segment, widget.onComment),
+                _action(
+                  'Compartilhar referência',
+                  Icons.north_east,
+                  widget.onShare,
                 ),
-                IconButton(
-                  tooltip: 'Compartilhar referência',
-                  onPressed: widget.onShare,
-                  icon: const Icon(
-                    LucideIcons.send,
-                    size: 26,
-                    color: ConexiaColors.ink,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  tooltip: saved
+                _action(
+                  saved
                       ? 'Remover dos salvos desta sessão'
                       : 'Salvar nesta sessão',
-                  onPressed: () => setState(() => saved = !saved),
-                  icon: Icon(
-                    saved ? Icons.bookmark_rounded : LucideIcons.bookmark,
-                    size: 27,
-                    color: ConexiaColors.ink,
-                  ),
+                  saved ? Icons.layers : Icons.layers_outlined,
+                  () => setState(() => saved = !saved),
+                  active: saved,
                 ),
               ],
             ),
           ),
+          if (widget.onDiscuss != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: widget.onDiscuss,
+                icon: Icon(Icons.join_inner),
+                label: Text('Vamos conversar?'),
+              ),
+            ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${p.likes} curtidas',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: ConexiaColors.ink,
-                  ),
-                ),
-                const SizedBox(height: 9),
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: '${p.author}  ',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      TextSpan(text: p.text),
-                    ],
-                  ),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.45,
-                    color: Color(0xFF353742),
-                  ),
-                ),
-                const SizedBox(height: 5),
-                InkWell(
-                  onTap: widget.onComment,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      'Ver comentários',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: ConexiaColors.muted,
-                      ),
-                    ),
-                  ),
-                ),
-                if (widget.onDiscuss != null)
-                  TextButton.icon(
-                    onPressed: widget.onDiscuss,
-                    icon: const Icon(Icons.forum_outlined, size: 18),
-                    label: const Text('Vamos conversar?'),
-                  ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.lock_outline_rounded,
-                      size: 12,
-                      color: ConexiaColors.muted,
-                    ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Text(
-                        widget.preview
-                            ? 'CONTEÚDO DE DEMONSTRAÇÃO'
-                            : 'VISIBILIDADE PROTEGIDA',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          letterSpacing: .7,
-                          color: ConexiaColors.muted,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (saved)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Salvo nesta sessão',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: ConexiaColors.brand,
-                      ),
-                    ),
-                  ),
-              ],
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 18),
+            child: Text(
+              widget.preview
+                  ? 'PRÉVIA LOCAL · CONTEÚDO DE DEMONSTRAÇÃO'
+                  : saved
+                  ? 'SALVO NESTA SESSÃO · VISIBILIDADE PROTEGIDA'
+                  : 'VISIBILIDADE PROTEGIDA',
+              style: TextStyle(
+                fontSize: 10,
+                letterSpacing: 1,
+                color: ConexiaPalette.of(context).muted,
+              ),
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _action(
+    String tooltip,
+    IconData icon,
+    VoidCallback action, {
+    String? label,
+    bool active = false,
+  }) => Tooltip(
+    message: tooltip,
+    child: Semantics(
+      button: true,
+      label: tooltip,
+      child: AnimatedContainer(
+        duration: ConexiaMotion.duration(context),
+        decoration: BoxDecoration(
+          color: active
+              ? ConexiaPalette.of(context).tinted
+              : ConexiaPalette.of(context).surface,
+          border: Border.all(color: ConexiaPalette.of(context).line),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(14),
+            bottomRight: Radius.circular(14),
+          ),
+        ),
+        child: TextButton(
+          onPressed: action,
+          style: TextButton.styleFrom(
+            minimumSize: Size(48, 48),
+            foregroundColor: ConexiaPalette.of(context).text,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 24),
+              if (label != null) ...[SizedBox(width: 6), Text(label)],
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }

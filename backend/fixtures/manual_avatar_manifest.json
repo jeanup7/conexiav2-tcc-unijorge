@@ -1,0 +1,110 @@
+[
+  {
+    "user": "conexia-manual15-v1-01",
+    "name": "Ana Beatriz Almeida",
+    "source": "backend\\fixtures\\seed_media\\zeno_kamau.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-01"
+  },
+  {
+    "user": "conexia-manual15-v1-02",
+    "name": "Lucas Henrique Santos",
+    "source": "backend\\fixtures\\seed_media\\ben_ten.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-02"
+  },
+  {
+    "user": "conexia-manual15-v1-03",
+    "name": "Mariana Costa Ribeiro",
+    "source": "backend\\fixtures\\seed_media\\robin.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-03"
+  },
+  {
+    "user": "conexia-manual15-v1-04",
+    "name": "Gabriel Oliveira Mendes",
+    "source": "backend\\fixtures\\seed_media\\avatar_ilustrado.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-04"
+  },
+  {
+    "user": "conexia-manual15-v1-05",
+    "name": "Camila Ferreira Lima",
+    "source": "backend\\fixtures\\seed_media\\garoto_quadrinhos.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-05"
+  },
+  {
+    "user": "conexia-manual15-v1-06",
+    "name": "Rafael Souza Carvalho",
+    "source": "backend\\fixtures\\seed_media\\manga_mar.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-06"
+  },
+  {
+    "user": "conexia-manual15-v1-07",
+    "name": "Juliana Martins Rocha",
+    "source": "backend\\fixtures\\seed_media\\chapeu_aventura.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-07"
+  },
+  {
+    "user": "conexia-manual15-v1-08",
+    "name": "Pedro Augusto Nascimento",
+    "source": "backend\\fixtures\\seed_media\\luffy_pelucia.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-08"
+  },
+  {
+    "user": "conexia-manual15-v1-09",
+    "name": "Fernanda Araujo Batista",
+    "source": "backend\\fixtures\\seed_media\\skate.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-09"
+  },
+  {
+    "user": "conexia-manual15-v1-10",
+    "name": "Bruno Vinicius Teixeira",
+    "source": "assets\\feed\\luffy.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-10"
+  },
+  {
+    "user": "conexia-manual15-v1-11",
+    "name": "Larissa Gomes Pereira",
+    "source": "assets\\feed\\peter_parker.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-11"
+  },
+  {
+    "user": "conexia-manual15-v1-12",
+    "name": "Diego Rodrigues Alves",
+    "source": "assets\\feed\\shikamaru_bahia.png",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-12"
+  },
+  {
+    "user": "conexia-manual15-v1-13",
+    "name": "Isabela Cristina Duarte",
+    "source": "assets\\feed\\spider_man.webp",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-13"
+  },
+  {
+    "user": "conexia-manual15-v1-14",
+    "name": "Thiago Matheus Barbosa",
+    "source": "backend\\fixtures\\seed_media\\zeno_kamau.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-14"
+  },
+  {
+    "user": "conexia-manual15-v1-15",
+    "name": "Vitoria Reis Monteiro",
+    "source": "backend\\fixtures\\seed_media\\ben_ten.jpg",
+    "media": "qa-supplied-avatar-conexia-manual15-v1-15"
+  },
+  {
+    "user": "-uKPQ9wwCYNW-4d8BUDJdM_xnZJrzMqOonSVrMCwT5U",
+    "name": "SofiArte",
+    "source": "backend\\fixtures\\seed_media\\garoto_quadrinhos.jpg",
+    "media": "qa-supplied-avatar--uKPQ9wwCYNW-4d8BUDJdM_xnZJrzMqOonSVrMCwT5U"
+  },
+  {
+    "user": "TwUdd-HEaL8C3du6xPd2Vl36isOJcgPSk7Cl8dvsux0",
+    "name": "LeoExplora",
+    "source": "backend\\fixtures\\seed_media\\ben_ten.jpg",
+    "media": "qa-supplied-avatar-TwUdd-HEaL8C3du6xPd2Vl36isOJcgPSk7Cl8dvsux0"
+  },
+  {
+    "user": "SalEVXoejvruaVnvrVNJeH_G7jkqs_4trh2vpkNb9dY",
+    "name": "BiaCriativa",
+    "source": "backend\\fixtures\\seed_media\\avatar_ilustrado.jpg",
+    "media": "qa-supplied-avatar-SalEVXoejvruaVnvrVNJeH_G7jkqs_4trh2vpkNb9dY"
+  }
+]
